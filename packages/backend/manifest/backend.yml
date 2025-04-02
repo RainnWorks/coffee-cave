@@ -1,0 +1,133 @@
+name: Simple POS System
+
+entities:
+
+  Manager:
+    properties:
+      - { name: email, type: string }
+      - { name: password, type: password }
+      - { name: name, type: string }
+    validation:
+      email: { required: true, unique: true }
+      password: { required: true }
+    policies:
+      signup:
+        - access: forbidden
+      create:
+        - { access: restricted, allow: admin }
+      read:
+        - { access: restricted, allow: admin }
+      update:
+        - { access: restricted, allow: admin }
+      delete:
+        - { access: restricted, allow: admin }
+
+  Staff:
+    authenticable: true
+    nameSingular: Staff Member
+    namePlural: Staff Members
+    mainProp: name
+    properties:
+      - { name: email, type: string }
+      - { name: password, type: password }
+      - { name: name, type: string }
+    validation:
+      email: { required: true, unique: true }
+      password: { required: true }
+    policies:
+      signup:
+        - access: forbidden
+      create:
+        - { access: restricted, allow: Manager }
+      read:
+        - { access: restricted, allow: Staff }
+      update:
+        - { access: restricted, allow: Manager }
+      delete:
+        - { access: restricted, allow: Manager }
+
+  Table:
+    properties:
+      - { name: name, type: string }
+    validation:
+      name: { required: true, unique: true }
+    policies:
+      create:
+        - { access: restricted, allow: Staff }
+      read:
+        - { access: restricted, allow: Staff }
+      update:
+        - { access: restricted, allow: Staff }
+      delete:
+        - { access: restricted, allow: Staff }
+
+  Category:
+    namePlural: Categories
+    properties:
+      - { name: name, type: string }
+      - { name: description, type: text }
+    validation:
+      name: { required: true }
+    policies:
+      create:
+        - { access: restricted, allow: Staff }
+      read:
+        - access: public
+      update:
+        - { access: restricted, allow: Staff }
+      delete:
+        - { access: restricted, allow: Staff }
+
+  Item:
+    properties:
+      - { name: name, type: string }
+      - { name: price, type: number }
+    validation:
+      price: { required: true }
+      name: { required: true }
+    belongsTo:
+      - Category
+      - { name: createdBy, entity: Staff }
+    policies:
+      create:
+        - { access: restricted, allow: Staff }
+      read:
+        - access: public
+      update:
+        - { access: restricted, allow: Staff }
+      delete:
+        - { access: restricted, allow: Staff }
+
+  Tab:
+    properties:
+      - { name: status, type: choice, options: { values: [open, closed] }, default: open }
+    belongsTo:
+      - Table
+      - { name: createdBy, entity: Staff }
+    policies:
+      create:
+        - { access: restricted, allow: Staff }
+      read:
+        - { access: restricted, allow: Staff }
+      update:
+        - { access: restricted, allow: Staff }
+      delete:
+        - { access: restricted, allow: Staff }
+
+  TabItem:
+    properties:
+      - { name: quantity, type: number, default: 1 }
+      - { name: status, type: choice, options: { values: [ordered, paid]}, default: ordered }
+    belongsTo:
+      - Tab
+      - Item
+      - { name: createdBy, entity: Staff }
+    policies:
+      create:
+        - { access: restricted, allow: Staff }
+      read:
+        - { access: restricted, allow: Staff }
+      update:
+        - { access: restricted, allow: Staff }
+      delete:
+        - { access: restricted, allow: Staff }
