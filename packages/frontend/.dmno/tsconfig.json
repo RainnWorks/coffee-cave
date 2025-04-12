@@ -1,0 +1,9 @@
+{
+  "extends": "dmno/tsconfigs/dmno-folder",
+  "include": [
+    "./**/*.mts",
+    "./.typegen/schema.d.ts",
+    "./.typegen/global.d.ts",
+    "./.typegen/global-public.d.ts"
+  ]
+}

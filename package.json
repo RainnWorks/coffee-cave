@@ -6,7 +6,13 @@
     "packages/*"
   ],
   "packageManager": "yarn@4.8.1",
+  "scripts": {
+    "dev": "yarn dmno run -- yarn turbo dev"
+  },
   "devDependencies": {
     "turbo": "^2.4.4"
+  },
+  "dependencies": {
+    "dmno": "^0.0.39"
   }
 }
