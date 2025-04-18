@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { API_URL } from "@/lib/manifest/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { API_URL } from "@/lib/manifest/api-client/common";
+import { cn } from "@/lib/utils";
 
-export function EmailPasswordLogin() {
+export default function EmailPasswordLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +57,20 @@ export function EmailPasswordLogin() {
   return (
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader className="bg-gray-100 border-b">
-        <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center flex-1 relative">
+            <Link
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "mr-4 absolute left-0 top-1/2 -translate-y-1/2"
+              )}
+              href={`/login`}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <CardTitle className="text-2xl flex-1 text-center">Admin Login</CardTitle>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-6 flex flex-col gap-4">
         <Link href="/login">
@@ -99,13 +113,5 @@ export function EmailPasswordLogin() {
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <EmailPasswordLogin />
-    </main>
   );
 }

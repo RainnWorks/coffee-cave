@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Trash2, UserPlus, Users } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { getAllStaff, createStaff, deleteStaff } from "@/lib/staff-api"
+import { toast } from "sonner"
 
 interface StaffMember {
   id: string
@@ -20,7 +20,6 @@ interface StaffMember {
 }
 
 export function StaffManagement() {
-  const { toast } = useToast()
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -59,11 +58,7 @@ export function StaffManagement() {
       setStaffMembers(staff)
     } catch (error) {
       console.error("Error loading staff members:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load staff members",
-        variant: "destructive",
-      })
+      toast.error("Failed to load staff members")
     } finally {
       setIsLoading(false)
     }
@@ -85,20 +80,12 @@ export function StaffManagement() {
     e.preventDefault()
 
     if (!firstName || !lastName || !username || !pin) {
-      toast({
-        title: "Validation Error",
-        description: "All fields are required",
-        variant: "destructive",
-      })
+      toast.error("All fields are required")
       return
     }
 
     if (pin.length !== 4 || !/^\d+$/.test(pin)) {
-      toast({
-        title: "Validation Error",
-        description: "PIN must be a 4-digit number",
-        variant: "destructive",
-      })
+      toast.error("PIN must be a 4-digit number")
       return
     }
 
@@ -120,11 +107,7 @@ export function StaffManagement() {
 
       setStaffMembers([...staffMembers, staffWithId])
 
-      toast({
-        title: "Staff Added",
-        description: `${firstName} ${lastName} has been added successfully`,
-        variant: "success",
-      })
+      toast.success(`${firstName} ${lastName} has been added successfully`)
 
       // Reset form
       setFirstName("")
@@ -134,11 +117,7 @@ export function StaffManagement() {
       setShowAddForm(false)
     } catch (error) {
       console.error("Error creating staff member:", error)
-      toast({
-        title: "Error",
-        description: "Failed to create staff member",
-        variant: "destructive",
-      })
+      toast.error("Failed to create staff member")
     } finally {
       setIsSubmitting(false)
     }
@@ -152,18 +131,10 @@ export function StaffManagement() {
       // Update local state
       setStaffMembers(staffMembers.filter((staff) => staff.id !== id))
 
-      toast({
-        title: "Staff Removed",
-        description: "Staff member has been removed successfully",
-        variant: "success",
-      })
+      toast.success("Staff member has been removed successfully")
     } catch (error) {
       console.error("Error deleting staff member:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete staff member",
-        variant: "destructive",
-      })
+      toast.error("Failed to delete staff member")
     } finally {
       setDeletingId(null)
     }

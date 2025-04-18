@@ -1,24 +1,20 @@
 "use client";
 
+import { createCurrencyFormatter } from "@/lib/currency";
 import { createContext, useContext, type ReactNode } from "react";
 
 export interface RestaurantConfig {
   name: string;
   currencyCode: string;
+  currencyLocale: string;
   timeZone: string;
   primaryColor: string;
   secondaryColor: string;
 }
 
-interface RestaurantConfigContextType {
-  config: RestaurantConfig | null;
-  error: string | null;
-}
-
-const RestaurantConfigContext = createContext<RestaurantConfigContextType>({
-  config: null,
-  error: null,
-});
+const RestaurantConfigContext = createContext<RestaurantConfig>(
+  null as unknown as RestaurantConfig
+);
 
 export const useRestaurantConfig = () => useContext(RestaurantConfigContext);
 
@@ -32,8 +28,13 @@ export function RestaurantConfigProvider({
   config,
 }: RestaurantConfigProviderProps) {
   return (
-    <RestaurantConfigContext.Provider value={{ config, error: null }}>
+    <RestaurantConfigContext.Provider value={config}>
       {children}
     </RestaurantConfigContext.Provider>
   );
 }
+
+export const useCurrencyFormatter = () => {
+  const config = useRestaurantConfig();
+  return createCurrencyFormatter(config);
+};

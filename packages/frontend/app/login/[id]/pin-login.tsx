@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { PinKeypad } from "./pin-keypad";
-import { API_URL } from "@/lib/manifest/client";
-import { Staff } from "../page";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/lib/manifest/api-client/common";
+import { Staff } from "@/lib/manifest/types";
 
 export const PinLogin = ({ staffMember }: { staffMember: Staff }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);

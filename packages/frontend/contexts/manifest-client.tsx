@@ -1,19 +1,17 @@
 "use client";
 
-import { getClient } from "@/lib/manifest/client";
-import Manifest from "@mnfst/sdk";
-import { createContext, ReactNode, use } from "react";
+import { ManifestClient } from "@/lib/manifest/api-client/common";
+import { getManifestClient } from "@/lib/manifest/api-client/client";
+import { createContext, ReactNode, use, useMemo } from "react";
 
 type ManifestContext = {
-  client: Manifest
-}
+  client: ManifestClient;
+};
 
-const ManifestContext = createContext<ManifestContext | undefined>(
-  undefined
-);
+const ManifestContext = createContext<ManifestContext | undefined>(undefined);
 
 export function ManifestProvider({ children }: { children: ReactNode }) {
-  const manifestClient = getClient();
+  const manifestClient = useMemo(() => getManifestClient(), []);
   return (
     <ManifestContext.Provider value={{ client: manifestClient }}>
       {children}

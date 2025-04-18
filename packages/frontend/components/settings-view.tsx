@@ -12,7 +12,7 @@ import { useRestaurantConfig } from "@/contexts/restaurant-config"
 
 export function SettingsView() {
   const router = useRouter()
-  const { config } = useRestaurantConfig()
+  const config = useRestaurantConfig()
   const [activeTab, setActiveTab] = useState("staff")
 
   const handleBack = () => {

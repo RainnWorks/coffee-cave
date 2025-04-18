@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSecurePassword } from "../../utils/email-password";
 import { buildEmail } from "../../utils/email-password";
 
+export const dynamic = "force-dynamic";
+
 // Use environment variable or default to localhost for API URL
 const API_URL = process.env.BACKEND_API_URL || "http://localhost:1111";
 
@@ -18,11 +20,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    
-    console.log(JSON.stringify({
-      email: buildEmail(username),
-      password: createSecurePassword(pin, username),
-    }))
 
     // Forward the request to the backend API
     const response = await fetch(`${API_URL}/api/auth/staff/login`, {
