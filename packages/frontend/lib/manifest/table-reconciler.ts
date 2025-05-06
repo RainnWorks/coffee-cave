@@ -33,9 +33,9 @@ const capitalize = (str: string) => {
 export const generateTabName = (categories: string[]): string => {
   if (categories.length === 0) return "Empty";
 
-  const categoriesSet = [...new Set(categories)].map((cat) =>
-    cat.toLowerCase()
-  ).slice(0, 3);
+  const categoriesSet = [...new Set(categories)]
+    .map((cat) => cat.toLowerCase())
+    .slice(0, 3);
   categoriesSet[0] = capitalize(categoriesSet[0]);
   if (categoriesSet.length === 1) return categoriesSet[0];
 
@@ -64,7 +64,8 @@ export const ReconciledTableSchema = TableSchema.transform((table) => {
 
   table.payments?.forEach((payment) => {
     let paymentToAllocate = payment.amount;
-    payment.tabItemsPaid.forEach((tabItem) => {
+    tableBalance -= paymentToAllocate;
+    payment.tabItemsPaids.forEach((tabItem) => {
       const tabId = tabItem.id;
       if (!tabBalances[tabId]) tabBalances[tabId] = 0;
       const tabBalance = tabBalances[tabId];
@@ -77,7 +78,7 @@ export const ReconciledTableSchema = TableSchema.transform((table) => {
   // Create a map of paid tab items for faster lookups
   const paidTabItemIds = new Set<number>();
   table.payments?.forEach((payment) => {
-    payment.tabItemsPaid.forEach((tabItem) => {
+    payment.tabItemsPaids.forEach((tabItem) => {
       paidTabItemIds.add(tabItem.id);
     });
   });

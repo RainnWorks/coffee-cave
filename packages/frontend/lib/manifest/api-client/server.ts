@@ -38,6 +38,7 @@ export const getServerManifestClient = async (): Promise<ManifestClient> => {
 
       // Return the fetch with the combined headers
       return fetch(`${API_URL}/${path}`, {
+        cache: "no-store",
         ...options,
         headers: fetchHeaders,
       });

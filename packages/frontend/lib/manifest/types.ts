@@ -1,24 +1,4 @@
-import { z } from "zod";
-import { DateTime } from "luxon";
-
-// Custom Zod schema for DateTime
-export const dateTimeSchema = z.union([
-  z.string().transform((dateStr) => {
-    const parsed = DateTime.fromISO(dateStr);
-    if (!parsed.isValid) {
-      throw new Error(`Invalid date format: ${dateStr}`);
-    }
-    return parsed;
-  }),
-  z.custom<DateTime>(
-    (val) => {
-      return DateTime.isDateTime(val) && (val as DateTime).isValid;
-    },
-    {
-      message: "Invalid DateTime object",
-    }
-  ),
-]);
+import { z } from "zod"
 
 export const RestaurantConfigSchema = z.object({
   name: z.string(),
@@ -27,6 +7,7 @@ export const RestaurantConfigSchema = z.object({
   timeZone: z.string().nonempty(),
   primaryColor: z.string().nonempty(),
   secondaryColor: z.string().nonempty(),
+  coinsAndNotes: z.string().nonempty(),
 });
 
 export const CategorySchema = z.object({
@@ -66,7 +47,7 @@ export const TabItemSchema = z.object({
   notes: z.string().optional().nullable(),
   nameOverride: z.string().optional().nullable(),
   priceOverride: z.number().optional(),
-  createdAt: dateTimeSchema,
+  createdAt: z.string().datetime(),
 });
 
 export const TabItemWithMenuItemSchema = TabItemSchema.extend({
@@ -85,7 +66,8 @@ export type TabItem = z.infer<typeof TabItemSchema>;
 export const TabSchema = z.object({
   id: z.number(),
   tabItems: z.array(TabItemWithMenuItemSchema),
-  createdAt: dateTimeSchema,
+  createdAt: z.string().datetime(),
+  locked: z.coerce.boolean().default(false),
 });
 
 export type RestaurantConfig = z.infer<typeof RestaurantConfigSchema>;
@@ -106,10 +88,9 @@ export type Tab = z.infer<typeof TabSchema>;
 export const PaymentSchema = z.object({
   id: z.number(),
   amount: z.number(),
-  method: z.enum(["cash", "card", "other"]),
   note: z.string().optional(),
-  tabItemsPaid: z.array(z.object({ id: z.number() })),
-  createdAt: dateTimeSchema,
+  tabItemsPaids: z.array(z.object({ id: z.number() })),
+  createdAt: z.string().datetime(),
 });
 
 export type Payment = z.infer<typeof PaymentSchema>;
@@ -119,7 +100,7 @@ export const TableSchema = z.object({
   name: z.string(),
   tabs: z.array(TabSchema).optional(),
   seats: z.number(),
-  createdAt: dateTimeSchema,
+  createdAt: z.string().datetime(),
   payments: z.array(PaymentSchema).optional(),
   notes: z.string().optional().nullable(),
 });

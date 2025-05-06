@@ -7,8 +7,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DateTime } from "luxon";
+import { cn } from "@/lib/utils";
 
-export const CreateTabButton = ({ tableId }: { tableId: number }) => {
+export const CreateTabButton = ({
+  tableId,
+  className,
+  ...props
+}: { tableId: number } & React.ComponentProps<typeof Button>) => {
   const router = useRouter();
   const { client } = useManifest();
   const [isCreatingTab, setIsCreatingTab] = useState(false);
@@ -37,7 +42,8 @@ export const CreateTabButton = ({ tableId }: { tableId: number }) => {
 
   return (
     <Button
-      className="gap-1 h-10"
+      className={cn("gap-1 h-10", className)}
+      {...props}
       onClick={handleCreateNewTab}
       disabled={isCreatingTab}
     >

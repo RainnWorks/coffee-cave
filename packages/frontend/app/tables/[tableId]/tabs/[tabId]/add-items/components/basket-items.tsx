@@ -317,7 +317,7 @@ export const BasketItems = ({
             </div>
           </div>
 
-          <DialogFooter className="flex gap-3 sm:gap-0">
+          <DialogFooter className="flex gap-3">
             <Button
               variant="outline"
               className="flex-1 h-14 text-base"

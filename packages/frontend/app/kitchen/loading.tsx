@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export function KitchenViewSkeleton() {
+export default function KitchenViewSkeleton() {
   return (
     <Card className="w-full max-w-6xl shadow-lg">
       <CardHeader className="border-b bg-gray-100">
@@ -52,6 +52,5 @@ export function KitchenViewSkeleton() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-

@@ -2,65 +2,67 @@
 
 import type React from "react";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Page, PageContent, PageHeader, PageTitle } from "@/components/ui/page";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   ArrowLeft,
   CheckCircle2,
-  SplitSquareVertical,
+  HandCoins,
+  HandPlatter,
   ListChecks,
-  Users,
   Loader2,
   Minus,
   Plus,
+  SquareSplitHorizontal,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
   useCurrencyFormatter,
+  useCurrencyUtils,
   useRestaurantConfig,
 } from "@/contexts/restaurant-config";
 import {
   generateTabName,
+  ReconciledTabItem,
   ReconciledTable,
 } from "@/lib/manifest/table-reconciler";
 import { GroupedItem, groupItems } from "@/lib/basket";
-import { TabItem } from "@/lib/manifest/types";
 import { cn, partition } from "@/lib/utils";
 import Link from "next/link";
 import { parseAsStringEnum, useQueryState } from "nuqs";
-
-const getCurrencySymbol = (locale: string, currency: string) =>
-  (0)
-    .toLocaleString(locale, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })
-    .replace(/\d/g, "")
-    .trim();
+import { Card, CardHeader } from "@/components/ui/card";
+import { addPayment } from "../actions/add-payment";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { SplitModal } from "./split-modal";
+import { PosInput } from "@/components/ui/pos-input";
+import {
+  DialogHeader,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ChangeCalculator } from "./change-calculator";
 
 export const PaySpecificItemsForm = ({ table }: { table: ReconciledTable }) => {
-  const config = useRestaurantConfig();
   const formatCurrency = useCurrencyFormatter();
   const [note, setNote] = useState("");
+  const { replace } = useRouter();
 
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
-  const addItem = (item: GroupedItem<TabItem>) => {
-    const possibleIdsToAdd = item.items.find(
-      (item) => !selectedItems.includes(item.id)
-    )?.id;
+  const addItem = (item: GroupedItem<ReconciledTabItem>) => {
+    const possibleIdsToAdd = item.items
+      .filter((item) => !item.paid)
+      .find((item) => !selectedItems.includes(item.id))?.id;
     if (typeof possibleIdsToAdd !== "undefined")
       setSelectedItems((ids) => [...ids, possibleIdsToAdd]);
   };
 
-  const removeItem = (item: GroupedItem<TabItem>) => {
+  const removeItem = (item: GroupedItem<ReconciledTabItem>) => {
     const firstIdToRemove = selectedItems.findIndex((id) =>
       item.items.some((item) => item.id === id)
     );
@@ -81,10 +83,63 @@ export const PaySpecificItemsForm = ({ table }: { table: ReconciledTable }) => {
     }, 0);
   }, [selectedItems, table]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const processAmount = Math.min(paymentAmount, table.remainingBalance ?? 0);
+
+  const submitPayment = useCallback(async () => {
+    setIsSubmitting(true);
+    if (isSubmitting) return;
+    try {
+      const { error, result } = await addPayment({
+        tableId: table.id,
+        tabItemIds: selectedItems,
+        paidAmount: processAmount,
+        notes: note,
+      });
+
+      if (error) {
+        toast.error(error);
+        return;
+      } else {
+        toast.success(`Payment ${result!.id} added successfully`);
+        replace(`/tables/${table.id}`);
+      }
+    } catch (error) {
+      toast.error("Failed to add payment: " + (error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [table.id, selectedItems, processAmount, note, replace, isSubmitting]);
+
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+  const [splitModalProps, setSplitModalProps] = useState<
+    | {
+        totalToSplit: number;
+        tabItemIds: number[];
+        defaultSplitCount: number;
+      }
+    | undefined
+  >(undefined);
+
   return (
     <div className="space-y-3">
-      <h3 className="font-medium">Unpaid Items</h3>
-      <div className="border rounded-md max-h-[500px] overflow-y-auto">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-medium">Remaining Items</h2>
+        <Button
+          className=" p-6 sm:px-8"
+          onClick={() =>
+            setSelectedItems(
+              table.tabs?.flatMap((tab) =>
+                tab.tabItems.map((item) => item.id)
+              ) ?? []
+            )
+          }
+        >
+          Select Whole Table
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {table.tabs?.map((tab) => {
           // Skip tabs with no unpaid items
           const hasUnpaidItems = tab.tabItems.some((item) => !item.paid);
@@ -92,14 +147,27 @@ export const PaySpecificItemsForm = ({ table }: { table: ReconciledTable }) => {
           const groupedItemMap = groupItems(tab.tabItems);
           const groupedItems = Object.values(groupedItemMap);
           return (
-            <div key={tab.id} className="border-b last:border-b-0">
-              <div className="bg-gray-50 p-3 font-medium">
-                {generateTabName(
-                  tab.tabItems.map(
-                    (item) => item.menuItem?.categories?.[0]?.name ?? "Custom"
-                  )
-                )}
-              </div>
+            <Card
+              key={tab.id}
+              className="border rounded-md lg:max-h-[500px] lg:overflow-y-auto"
+            >
+              <CardHeader className="bg-gray-50 p-3 flex flex-row justify-between items-center">
+                <h3 className="font-medium">
+                  {generateTabName(
+                    tab.tabItems.map(
+                      (item) => item.menuItem?.categories?.[0]?.name ?? "Custom"
+                    )
+                  )}
+                </h3>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setSelectedItems(tab.tabItems.map((item) => item.id))
+                  }
+                >
+                  Select Tab
+                </Button>
+              </CardHeader>
               <div className="divide-y">
                 {groupedItems
                   .filter((group) => group.items.some((item) => !item.paid))
@@ -133,7 +201,9 @@ export const PaySpecificItemsForm = ({ table }: { table: ReconciledTable }) => {
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="w-12 text-center">{quantity}</span>
+                            <span className="min-w-8 text-center">
+                              {quantity}
+                            </span>
                             <Button
                               variant="outline"
                               size="sm"
@@ -183,123 +253,42 @@ export const PaySpecificItemsForm = ({ table }: { table: ReconciledTable }) => {
                     );
                   })}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
 
-      <Label htmlFor="payment-amount">Payment Amount</Label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-          {getCurrencySymbol(config.currencyLocale, config.currencyCode)}
-        </span>
-        <Input
-          id="payment-amount"
-          type="text"
-          value={paymentAmount}
-          className="pl-8 text-lg font-bold"
-          disabled
-        />
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="font-medium">Note (Optional)</h3>
-        <Textarea
-          placeholder="Add a note about this payment..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="resize-none"
-          rows={3}
-        />
-      </div>
-
-      <Button
-        className="w-full h-12 text-lg"
-        // onClick={handleProcessPayment}
-        // disabled={
-        //   !paymentAmount ||
-        //   Number.parseFloat(paymentAmount) <= 0 ||
-        //   isProcessing ||
-        //   (paymentType === "tab" && !selectedTabId) ||
-        //   (paymentType === "items" && Object.keys(selectedItems).length === 0)
-        // }
-      >
-        {false ? (
-          <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          `Process ${formatCurrency(paymentAmount)} Payment`
-        )}
-      </Button>
-    </div>
-  );
-};
-
-export const PayTabForm = ({ table }: { table: ReconciledTable }) => {
-  const config = useRestaurantConfig();
-  const formatCurrency = useCurrencyFormatter();
-  const [note, setNote] = useState("");
-  const [selectedTabId, setSelectedTabId] = useState<number | null>(null);
-
-  const paymentAmount = useMemo(() => {
-    const selectedTab = table.tabs?.find((tab) => tab.id === selectedTabId);
-    return selectedTab?.remainingBalance ?? 0;
-  }, [selectedTabId, table]);
-
-  return (
-    <div className="space-y-3">
-      <h3 className="font-medium">Select Tab to Pay</h3>
-      <div className="space-y-2">
-        {table.tabs?.map((tab) => {
-          const tabRemaining = tab.remainingBalance ?? 0;
-          if (tabRemaining <= 0) return null;
-
-          return (
-            <div
-              key={tab.id}
-              className={`border rounded-md p-3 cursor-pointer hover:bg-gray-50 ${
-                selectedTabId === tab.id ? "border-blue-500 bg-blue-50" : ""
-              }`}
-              onClick={() => setSelectedTabId(tab.id)}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">
-                    {generateTabName(
-                      tab.tabItems.map(
-                        (item) =>
-                          item.menuItem?.categories?.[0]?.name ?? "Custom"
-                      )
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {tab.tabItems.length} items • Opened{" "}
-                    {tab.createdAt.setZone(config.timeZone).toLocaleString()}
-                  </div>
-                </div>
-                <div className="font-bold text-blue-700">
-                  {formatCurrency(tabRemaining)}
-                </div>
+      <div className="flex justify-end">
+        <div className="p-3">
+          {processAmount !== paymentAmount ? (
+            <div>
+              <div
+                className={cn(
+                  "text-xl tabular-nums text-right",
+                  "text-gray-400 font-medium line-through"
+                )}
+              >
+                {formatCurrency(paymentAmount)}
+              </div>
+              <div className="text-right text-sm text-gray-500">
+                Only {formatCurrency(table.remainingBalance ?? 0)} remaining
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      <Label htmlFor="payment-amount">Payment Amount</Label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-          {getCurrencySymbol(config.currencyLocale, config.currencyCode)}
-        </span>
-        <Input
-          id="payment-amount"
-          type="text"
-          value={paymentAmount}
-          className="pl-8 text-lg font-bold"
-          disabled
-        />
+          ) : null}
+          <div>
+            <div
+              className={cn(
+                "text-3xl tabular-nums text-right",
+                processAmount <= 0
+                  ? "text-gray-400 font-medium"
+                  : "font-bold text-blue-700"
+              )}
+            >
+              {formatCurrency(processAmount)}
+            </div>
+            <div className="text-right text-lg text-gray-500">Subtotal</div>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -313,214 +302,210 @@ export const PayTabForm = ({ table }: { table: ReconciledTable }) => {
         />
       </div>
 
-      <Button
-        className="w-full h-12 text-lg"
-        // onClick={handleProcessPayment}
-        // disabled={
-        //   !paymentAmount ||
-        //   Number.parseFloat(paymentAmount) <= 0 ||
-        //   isProcessing ||
-        //   (paymentType === "tab" && !selectedTabId) ||
-        //   (paymentType === "items" && Object.keys(selectedItems).length === 0)
-        // }
-      >
-        {false ? (
-          <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          `Process ${formatCurrency(paymentAmount)} Payment`
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {splitModalProps && (
+          <SplitModal
+            open={isSplitModalOpen}
+            tableId={table.id}
+            onPaymentSuccess={() => {
+              replace(`/tables/${table.id}`);
+            }}
+            onOpenChange={(open) => {
+              if (!open) setIsSplitModalOpen(false);
+            }}
+            dialogContentProps={{
+              onAnimationEnd: () => {
+                if (!isSplitModalOpen) setSplitModalProps(undefined);
+              },
+            }}
+            {...splitModalProps}
+          />
         )}
-      </Button>
+        <Button
+          variant="outline"
+          className="text-lg p-6 sm:px-8"
+          onClick={() => {
+            setSplitModalProps({
+              defaultSplitCount: table.seats,
+              totalToSplit: processAmount,
+              tabItemIds: selectedItems,
+            });
+            setIsSplitModalOpen(true);
+          }}
+          disabled={!processAmount || processAmount <= 0 || isSubmitting}
+        >
+          <SquareSplitHorizontal className="mr-2 h-6! w-6!" />
+          Split Bill
+        </Button>
+        <Button
+          className="text-lg p-6 sm:px-8"
+          onClick={submitPayment}
+          disabled={!processAmount || processAmount <= 0 || isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <HandCoins className="mr-2 h-6! w-6!" />
+              Record Payment
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
 
-export const PayTableForm = ({ table }: { table: ReconciledTable }) => {
+export const PayTableForm = ({
+  table,
+  full,
+}: {
+  table: ReconciledTable;
+  full?: boolean;
+}) => {
   const config = useRestaurantConfig();
+  const { push, replace } = useRouter();
   const formatCurrency = useCurrencyFormatter();
-  const [paymentAmount, setPaymentAmount] = useState(table.remainingBalance);
-  const [note, setNote] = useState("");
+  const { minorToMajor, majorToMinor } = useCurrencyUtils();
+  const [paymentAmount, setPaymentAmount] = useState(
+    full ? table.remainingBalance : 0
+  );
+  const [customPaymentAmount, setCustomPaymentAmount] = useState<string>(
+    minorToMajor(paymentAmount).toString()
+  );
+  const [showChangeCalculator, setShowChangeCalculator] = useState(false);
+  useEffect(() => {
+    if (full) {
+      setPaymentAmount(table.remainingBalance);
+      setCustomPaymentAmount(minorToMajor(table.remainingBalance).toString());
+    } else {
+      setPaymentAmount(0);
+      setCustomPaymentAmount("0");
+    }
+  }, [full, table.remainingBalance, minorToMajor]);
+
+  const numberFormatter = new Intl.NumberFormat(config.currencyLocale, {
+    style: "currency",
+    currency: config.currencyCode,
+    minimumFractionDigits: 0,
+  });
+
+  const isOvercharging = paymentAmount > table.remainingBalance;
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      // TODO: Add payment processing logic
+      // const { error } = await addPayment({
+      //   tableId: table.id,
+      //   paidAmount: processAmount,
+      //   tabItemIds: [],
+      // });
+      // if (error) {
+      //   toast.error("Error processing payment: " + error);
+      //   return;
+      // }
+
+      setShowChangeCalculator(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const [splitModalProps, setSplitModalProps] = useState<
+    | {
+        totalToSplit: number;
+        tabItemIds: number[];
+        defaultSplitCount: number;
+      }
+    | undefined
+  >(undefined);
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+
   return (
     <div className="space-y-3">
-      <Label htmlFor="payment-amount">Payment Amount</Label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-          {getCurrencySymbol(config.currencyLocale, config.currencyCode)}
-        </span>
-        <Input
-          id="payment-amount"
-          type="text"
-          value={paymentAmount}
-          onChange={(e) => setPaymentAmount(Number(e.target.value))}
-          className="pl-8 text-lg font-bold"
-          disabled
-        />
-      </div>
-
       <div className="space-y-3">
-        <h3 className="font-medium">Note (Optional)</h3>
-        <Textarea
-          placeholder="Add a note about this payment..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="resize-none"
-          rows={3}
+        <Label htmlFor="payment-amount">Payment Amount</Label>
+        <PosInput
+          disabled={isSubmitting || full}
+          value={customPaymentAmount.toString()}
+          onChange={(value) => setCustomPaymentAmount(value)}
+          onChangeNumeric={(value) => setPaymentAmount(majorToMinor(value))}
+          formatter={numberFormatter}
         />
       </div>
-
-      <Button
-        className="w-full h-12 text-lg"
-        // onClick={handleProcessPayment}
-        // disabled={
-        //   !paymentAmount ||
-        //   Number.parseFloat(paymentAmount) <= 0 ||
-        //   isProcessing ||
-        //   (paymentType === "tab" && !selectedTabId) ||
-        //   (paymentType === "items" && Object.keys(selectedItems).length === 0)
-        // }
-      >
-        {false ? (
-          <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          `Process ${formatCurrency(paymentAmount)} Payment`
+      {isOvercharging ? <div>Overcharging</div> : null}
+      <div className="mt-8 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {splitModalProps && (
+          <SplitModal
+            onPaymentSuccess={() => {
+              replace(`/tables/${table.id}`);
+            }}
+            open={isSplitModalOpen}
+            tableId={table.id}
+            onOpenChange={(open) => {
+              if (!open) setIsSplitModalOpen(false);
+            }}
+            dialogContentProps={{
+              onAnimationEnd: () => {
+                if (!isSplitModalOpen) setSplitModalProps(undefined);
+              },
+            }}
+            {...splitModalProps}
+          />
         )}
-      </Button>
-    </div>
-  );
-};
-
-// Calculate split amount based on total, number of parts, and parts to pay
-export function calculateSplitAmount(
-  total: number,
-  splitCount: number,
-  splitPart: number
-): number {
-  return (total / splitCount) * splitPart;
-}
-
-export const SplitBillForm = ({ table }: { table: ReconciledTable }) => {
-  const [splitCount, setSplitCount] = useState(table.seats);
-  const [splitPart, setSplitPart] = useState(table.seats / 2);
-  const [note, setNote] = useState("");
-  const formatCurrency = useCurrencyFormatter();
-
-  const handleSplitCountChange = (count: number) => {
-    setSplitCount(count);
-    setSplitPart((prev) => (prev > count ? count : prev));
-  };
-
-  const handleSplitPartChange = (part: number) => {
-    setSplitPart(part);
-  };
-
-  const paymentAmount = useMemo(() => {
-    const amount = calculateSplitAmount(
-      table.remainingBalance,
-      splitCount,
-      splitPart
-    );
-    return amount;
-  }, [splitCount, splitPart, table]);
-
-  return (
-    <div className="space-y-4 border rounded-md p-4">
-      <h3 className="font-medium">Split Options</h3>
-
-      <div className="space-y-2">
-        <Label>Split in</Label>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSplitCountChange(splitCount - 1)}
-            disabled={splitCount <= 2}
-          >
-            -
-          </Button>
-          <div className="w-10 text-center">{splitCount}</div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSplitCountChange(splitCount + 1)}
-          >
-            +
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          className="text-lg p-6 sm:px-8"
+          onClick={() => {
+            setSplitModalProps({
+              defaultSplitCount: table.seats,
+              totalToSplit: paymentAmount,
+              tabItemIds: [],
+            });
+            setIsSplitModalOpen(true);
+          }}
+          disabled={!paymentAmount || paymentAmount <= 0 || isSubmitting}
+        >
+          <SquareSplitHorizontal className="mr-2 h-6! w-6!" />
+          Split Bill
+        </Button>
+        <Button
+          className="h-12 text-lg"
+          onClick={handleSubmit}
+          disabled={!paymentAmount || paymentAmount <= 0 || isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Process ${formatCurrency(paymentAmount)} Payment`
+          )}
+        </Button>
       </div>
-
-      <div className="space-y-2">
-        <Label>Pay</Label>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSplitPartChange(splitPart - 1)}
-            disabled={splitPart <= 1}
-          >
-            -
-          </Button>
-          <div className="w-10 text-center">{splitPart}</div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSplitPartChange(splitPart + 1)}
-            disabled={splitPart >= splitCount}
-          >
-            +
-          </Button>
-        </div>
-        <div className="text-sm text-gray-500">
-          Paying {splitPart} of {splitCount} parts
-        </div>
-      </div>
-
-      <div className="bg-gray-50 p-3 rounded-md">
-        <div className="flex items-center gap-2 mb-1">
-          <Users className="h-4 w-4 text-gray-500" />
-          <span className="font-medium">Payment Amount</span>
-        </div>
-        <div className="text-xl font-bold">{formatCurrency(paymentAmount)}</div>
-        <div className="text-sm text-gray-500">
-          {formatCurrency(paymentAmount / splitCount)} per part
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="font-medium">Note (Optional)</h3>
-        <Textarea
-          placeholder="Add a note about this payment..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="resize-none"
-          rows={3}
-        />
-      </div>
-
-      <Button
-        className="w-full h-12 text-lg"
-        // onClick={handleProcessPayment}
-        // disabled={
-        //   !paymentAmount ||
-        //   Number.parseFloat(paymentAmount) <= 0 ||
-        //   isProcessing ||
-        //   (paymentType === "tab" && !selectedTabId) ||
-        //   (paymentType === "items" && Object.keys(selectedItems).length === 0)
-        // }
+      <Dialog
+        open={showChangeCalculator}
+        onOpenChange={(open) => {
+          if (!open) {
+            console.log("called");
+            push(`/tables/${table.id}`);
+          }
+        }}
       >
-        {false ? (
-          <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          `Process ${formatCurrency(paymentAmount)} Payment`
-        )}
-      </Button>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Calculator</DialogTitle>
+          </DialogHeader>
+          <ChangeCalculator amountDue={paymentAmount} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -530,15 +515,15 @@ export function PaymentView({ table }: { table: ReconciledTable }) {
 
   const [paymentType, setPaymentType] = useQueryState(
     "type",
-    parseAsStringEnum(["full", "split", "items", "tab"])
-      .withDefault("full")
+    parseAsStringEnum(["specific-amount", "items", "remaining-balance"])
+      .withDefault("items")
       .withOptions({
         shallow: true,
       })
   );
 
   return (
-    <Page className="w-full max-w-4xl shadow-lg">
+    <Page className="w-full shadow-lg">
       <PageHeader className="border-b bg-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -560,8 +545,8 @@ export function PaymentView({ table }: { table: ReconciledTable }) {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-500">Total Remaining</div>
-            <div className="text-xl font-bold text-blue-700">
+            <div className="text-base text-gray-500">Remaining Balance</div>
+            <div className="text-2xl font-bold text-red-700">
               {formatCurrency(table.remainingBalance)}
             </div>
           </div>
@@ -569,7 +554,7 @@ export function PaymentView({ table }: { table: ReconciledTable }) {
       </PageHeader>
 
       <PageContent className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Left Column - Payment Options */}
           <div className="space-y-6">
             <div className="space-y-3">
@@ -577,65 +562,69 @@ export function PaymentView({ table }: { table: ReconciledTable }) {
               <RadioGroup
                 value={paymentType}
                 onValueChange={(value) =>
-                  setPaymentType(value as "full" | "split" | "items" | "tab")
+                  setPaymentType(
+                    value as "specific-amount" | "items" | "remaining-balance"
+                  )
                 }
                 className="space-y-2"
               >
-                <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer">
-                  <RadioGroupItem value="full" id="payment-full" />
-                  <Label
-                    htmlFor="payment-full"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span>Pay Table</span>
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer">
-                  <RadioGroupItem value="tab" id="payment-tab" />
-                  <Label
-                    htmlFor="payment-tab"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                    <span>Pay Tab</span>
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer">
-                  <RadioGroupItem value="split" id="payment-split" />
-                  <Label
-                    htmlFor="payment-split"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <SplitSquareVertical className="h-4 w-4 text-blue-600" />
-                    <span>Split Bill</span>
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer">
-                  <RadioGroupItem value="items" id="payment-items" />
-                  <Label
-                    htmlFor="payment-items"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
+                <Label
+                  htmlFor="payment-items"
+                  className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="items" id="payment-items" />
                     <ListChecks className="h-4 w-4 text-purple-600" />
                     <span>Pay Selected Items</span>
-                  </Label>
-                </div>
+                  </div>
+                </Label>
+                <Label
+                  htmlFor="specific-amount"
+                  className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem
+                      value="specific-amount"
+                      id="specific-amount"
+                    />
+                    <HandPlatter className="h-4 w-4 text-blue-600" />
+                    <span>Pay Custom Amount</span>
+                  </div>
+                </Label>
+                <Label
+                  htmlFor="remaining-balance"
+                  className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem
+                      value="remaining-balance"
+                      id="remaining-balance"
+                    />
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span>Pay Remaining Balance</span>
+                  </div>
+                </Label>
               </RadioGroup>
             </div>
 
-            {paymentType === "tab" && <PayTabForm table={table} />}
-            {paymentType === "split" && <SplitBillForm table={table} />}
-            {paymentType === "full" && <PayTableForm table={table} />}
-            {paymentType === "items" && <PaySpecificItemsForm table={table} />}
+            <div>
+              {/* {paymentType === "" && <SplitBillForm table={table} />} */}
+              {(paymentType === "specific-amount" ||
+                paymentType === "remaining-balance") && (
+                <PayTableForm
+                  full={paymentType === "remaining-balance"}
+                  table={table}
+                />
+              )}
+              {paymentType === "items" && (
+                <PaySpecificItemsForm table={table} />
+              )}
+            </div>
           </div>
 
-          <div className="space-y-3">
-            <h3 className="font-medium">All Tabs</h3>
-            <div className="border rounded-md max-h-[500px] overflow-y-auto">
+          {/* <div className="space-y-3">
+            <h3 className="font-medium">Paid items</h3>
+            <div className="border rounded-md md:overflow-y-auto">
               {table.tabs?.map((tab) => {
                 const groupedTabItemMap = groupItems(tab.tabItems);
                 const groupedTabItems = Object.values(groupedTabItemMap);
@@ -725,7 +714,7 @@ export function PaymentView({ table }: { table: ReconciledTable }) {
                 );
               })}
             </div>
-          </div>
+          </div> */}
 
           {/* Right Column - Items */}
         </div>

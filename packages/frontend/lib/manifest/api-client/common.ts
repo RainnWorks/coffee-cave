@@ -2,6 +2,7 @@ import { ReconciledTableSchema } from "../table-reconciler";
 import {
   AllergenSchema,
   CategoryWithMenuItemsSchema,
+  PaymentSchema,
   RestaurantConfigSchema,
   StaffSchema,
   TabItemWithMenuItemSchema,
@@ -57,13 +58,13 @@ export type ListFilterSuffixes =
  * @example
  * { name_eq: "john", age_gte: 18 }
  */
-export type ListFilters<T extends object> = {
+export type ListFilters<T extends object> = Partial<{
   [key in `${string & keyof T}${ListFilterSuffixes}`]:
     | string
     | number
     | boolean
     | null;
-};
+}>;
 
 export type PaginationOptions = {
   page?: number;
@@ -211,6 +212,39 @@ export const createPaginatedResponseSchema = <T>(schema: z.ZodType<T>) => {
   });
 };
 
+export const createAuthClient = (goFetch: APIClient, domain: string) => {
+  return {
+    login: async (
+      email: string,
+      password: string
+    ): Promise<ManifestResponse<{ id: number }>> => {
+      const params = buildSearchParams({});
+      const endpoint = buildUrl(`/api/auth/${domain}/login`, params);
+      return fetchWithErrorHandling<{ id: number }>(
+        goFetch,
+        endpoint,
+        undefined,
+        {
+          method: "POST",
+          body: JSON.stringify({ email, password }),
+        }
+      );
+    },
+    me: async (): Promise<ManifestResponse<{ id?: number; email?: string } | undefined>> => {
+      const params = buildSearchParams({});
+      const endpoint = buildUrl(`/api/auth/${domain}/me`, params);
+      return fetchWithErrorHandling<{ id?: number; email?: string } | undefined>(
+        goFetch,
+        endpoint,
+        undefined,
+        {
+          method: "GET",
+        }
+      );
+    },
+  };
+};
+
 export const createCollectionsClient = <Schema extends z.ZodType>(
   goFetch: APIClient,
   domain: string,
@@ -262,6 +296,38 @@ export const createCollectionsClient = <Schema extends z.ZodType>(
         }
       );
     },
+    update: async (
+      id: number,
+      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>
+    ): Promise<ManifestResponse<{ id: number }>> => {
+      const params = buildSearchParams({ relations });
+      const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
+      return fetchWithErrorHandling<{ id: number }>(
+        goFetch,
+        endpoint,
+        undefined,
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      );
+    },
+    patch: async (
+      id: number,
+      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>
+    ): Promise<ManifestResponse<{ id: number }>> => {
+      const params = buildSearchParams({ relations });
+      const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
+      return fetchWithErrorHandling<{ id: number }>(
+        goFetch,
+        endpoint,
+        undefined,
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }
+      );
+    },
     delete: async (id: number): Promise<ManifestResponse<void>> => {
       const params = buildSearchParams({ relations });
       const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
@@ -300,6 +366,8 @@ export const createSinglesClient = <Schema extends z.ZodType>(
 // Main manifest client that provides access to all domain-specific clients
 export const createManifestClient = (goFetch: APIClient) => {
   return {
+    staffAuth: createAuthClient(goFetch, "staff"),
+    adminAuth: createAuthClient(goFetch, "admins"),
     tables: createCollectionsClient(goFetch, "tables", ReconciledTableSchema, [
       "tabs",
       "tabs.createdAt",
@@ -319,13 +387,13 @@ export const createManifestClient = (goFetch: APIClient) => {
     tabs: createCollectionsClient(goFetch, "tabs", TabSchema, [
       "tabItems",
       "tabItems.menuItem",
-      "tabItems.allergyRestrictions"
+      "tabItems.allergyRestrictions",
     ]),
     tabItems: createCollectionsClient(
       goFetch,
       "tab-items",
       TabItemWithMenuItemSchema,
-      ["allergyRestrictions","menuItem", "menuItem.allergens"]
+      ["allergyRestrictions", "menuItem", "menuItem.allergens"]
     ),
     categories: createCollectionsClient(
       goFetch,
@@ -334,6 +402,7 @@ export const createManifestClient = (goFetch: APIClient) => {
       ["menuItems", "menuItems.allergens"]
     ),
     allergens: createCollectionsClient(goFetch, "allergens", AllergenSchema),
+    payments: createCollectionsClient(goFetch, "payments", PaymentSchema),
   };
 };
 

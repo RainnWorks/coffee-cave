@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   ArrowLeft,
-  Plus,
   Receipt,
   CreditCard,
   Clock,
@@ -20,6 +19,8 @@ import { getServerManifestClient } from "@/lib/manifest/api-client/server";
 import { createCurrencyFormatter } from "@/lib/currency";
 import Link from "next/link";
 import { groupItems } from "@/lib/basket";
+import { DateTime } from "luxon";
+import { AddItemsLink } from "./tabs/[tabId]/add-items/components/add-items-link";
 
 export const dynamic = "force-dynamic";
 
@@ -108,8 +109,8 @@ export default async function TableDetailView({
 
   return (
     <Card className="w-full max-w-4xl shadow-lg">
-      <CardHeader className="border-b bg-gray-100">
-        <div className="flex items-center justify-between">
+      <CardHeader className="border-b bg-gray-100 p-0">
+        <div className="flex sm:items-center sm:justify-between flex-col sm:flex-row gap-6 p-6">
           <div className="flex items-center">
             <Link
               href="/tables"
@@ -133,9 +134,9 @@ export default async function TableDetailView({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex gap-3 flex-wrap">
             <Button
-              className={cn("px-10 h-10", {
+              className={cn("flex-shrink-0 flex-grow px-10 h-10", {
                 "pointer-events-none opacity-50":
                   !activeTab ||
                   activeTab.tabItems.length === 0 ||
@@ -151,20 +152,23 @@ export default async function TableDetailView({
               href={`/tables/${tableData.id}/payment`}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
-                "gap-1 h-10"
+                "flex-shrink-0 flex-grow gap-1 h-10"
               )}
             >
               <CreditCard className="h-4 w-4" />
               Process Payment
             </Link>
-            <CreateTabButton tableId={tableData.id} />
+            <CreateTabButton
+              className="flex-shrink-0 flex-grow"
+              tableId={tableData.id}
+            />
           </div>
         </div>
       </CardHeader>
 
       {(tableData.tabs?.length ?? 0) > 0 && (
-        <div className="flex border-b bg-gray-50 p-4 justify-between items-center gap-4">
-          <div className="flex flex-col flex-1 gap-2">
+        <div className="flex border-b bg-gray-50 justify-between items-center gap-4">
+          <div className="flex flex-col flex-1 gap-2 p-4 ">
             <div className="text-sm text-gray-500">Tabs</div>
             <div className="flex flex-wrap gap-2">
               {tableData.tabs?.map((tab) => {
@@ -187,15 +191,23 @@ export default async function TableDetailView({
               })}
             </div>
           </div>
-          <div className="flex flex-col gap-2">
+
+          <div className="flex flex-col gap-2 p-4 border-l">
             <div className="text-sm text-gray-500">Remaining Balance</div>
-            <div className="text-2xl font-bold text-blue-700">
-              {formatCurrency(activeTab?.remainingBalance ?? 0)}
+            <div className="text-2xl font-bold text-red-700 tabular-nums text-center">
+              {formatCurrency(
+                tableData.total - (tableData.total - tableData.remainingBalance)
+              )}
             </div>
             {tableData.remainingBalance > 0 && (
               <div className="text-xs text-gray-500">
-                {formatCurrency(tableData.total - tableData.remainingBalance)}{" "}
-                paid of {formatCurrency(tableData.total)}
+                <span className="tabular-nums">
+                  {formatCurrency(tableData.total - tableData.remainingBalance)}
+                </span>{" "}
+                paid of{" "}
+                <span className="tabular-nums">
+                  {formatCurrency(tableData.total)}
+                </span>
               </div>
             )}
           </div>
@@ -210,7 +222,11 @@ export default async function TableDetailView({
                 <h3 className="text-lg font-medium">{activeTab.name}</h3>
                 <div className="mt-1 flex items-center text-sm text-gray-500">
                   <Clock className="mr-1 h-3.5 w-3.5" />
-                  <span>{activeTab.createdAt.toLocaleString()}</span>
+                  <span>
+                    {DateTime.fromISO(activeTab.createdAt)
+                      .setZone(config.timeZone)
+                      .toLocaleString(DateTime.TIME_SIMPLE)}
+                  </span>
                   <span className="mx-2">•</span>
                   <span>{activeTab.tabItems?.length ?? 0} items</span>
                 </div>
@@ -221,27 +237,11 @@ export default async function TableDetailView({
               <div className="flex items-center justify-between border-b bg-gray-50 p-3">
                 <h4 className="font-medium">Items</h4>
                 <div className="flex gap-2">
-                  {/* {activeTab.payments.length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-1"
-                      onClick={() => setShowPaymentHistoryOverlay(true)}
-                    >
-                      <History className="h-3.5 w-3.5" />
-                      Payment History
-                    </Button>
-                  )} */}
-                  <Link
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "sm" }),
-                      "h-8 gap-1"
-                    )}
-                    href={`/tables/${tableData.id}/tabs/${activeTab.id}/add-items`}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Items
-                  </Link>
+                  <AddItemsLink
+                    tableId={tableData.id}
+                    tabId={activeTab.id}
+                    locked={activeTab.locked}
+                  />
                 </div>
               </div>
 
@@ -249,7 +249,6 @@ export default async function TableDetailView({
                 {activeTabId && activeTabItems.length > 0 ? (
                   activeTabItems.map((item) => {
                     const itemTotal = item.price * item.count;
-                    console.log(item);
                     const hasAllergies =
                       item.allergyRestrictions &&
                       item.allergyRestrictions.length > 0;
@@ -285,25 +284,10 @@ export default async function TableDetailView({
                                       : "Partial"}
                                   </Badge>
                                 )}
-                                {hasAllergies && (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1"
-                                  >
-                                    <AlertTriangle className="h-3 w-3" />
-                                    Allergies
-                                  </Badge>
-                                )}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {formatCurrency(item.price)} × {item.count}
                               </div>
-                              {countPaid > 0 && (
-                                <div className="text-xs text-gray-500">
-                                  {formatCurrency(countPaid)} paid of{" "}
-                                  {formatCurrency(item.count)}
-                                </div>
-                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-3">

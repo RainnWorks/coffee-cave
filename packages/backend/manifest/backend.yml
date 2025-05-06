@@ -13,6 +13,7 @@ entities:
       - { name: primaryColor, type: string, default: "#0f172a" }
       - { name: secondaryColor, type: string, default: "#3b82f6" }
       - { name: timeZone, type: string, default: "Europe/Paris" }
+      - { name: coinsAndNotes, type: string, default: "1,2,5,10,20,50,100,200,500,1000,2000" }
     policies:
       create:
         - { access: restricted, allow: admin }
@@ -112,6 +113,7 @@ entities:
   Tab:
     properties:
       - { name: "createdAt", type: timestamp }
+      - { name: locked, type: boolean }
     belongsTo:
       - { name: table, entity: Table }
       - { name: createdBy, entity: Staff }
@@ -128,6 +130,7 @@ entities:
   TabItem:
     nameSingular: "tabItem"
     namePlural: "tabItems"
+    mainProp: "id"
     properties: 
       - { name: notes, type: string }
       - { name: nameOverride, type: string }
@@ -150,12 +153,12 @@ entities:
 
   Payment:
     properties: 
-      - { name: method, type: choice, options: { values: [card, cash, other] } }
       - { name: amount, type: number }
       - { name: notes, type: text }
-      - { name: "createdAt", type: timestamp }
-    belongsToMany:
+      - { name: createdAt, type: timestamp }
+    belongsTo:
       - { name: table, entity: Table }
+    belongsToMany:
       - { name: tabItemsPaid, entity: TabItem }
     
     policies:
