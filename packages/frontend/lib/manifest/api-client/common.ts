@@ -164,7 +164,6 @@ const fetchWithErrorHandling = async <T>(
       } catch (zodError) {
         if (zodError instanceof z.ZodError) {
           const error = fromError(zodError);
-          console.error(JSON.stringify(resultJson, null, 2), zodError);
           return {
             result: undefined,
             error: error,
@@ -217,22 +216,26 @@ export const createAuthClient = (goFetch: APIClient, domain: string) => {
     login: async (
       email: string,
       password: string
-    ): Promise<ManifestResponse<{ id: number }>> => {
+    ): Promise<ManifestResponse<{ id: number, token: string }>> => {
       const params = buildSearchParams({});
       const endpoint = buildUrl(`/api/auth/${domain}/login`, params);
-      return fetchWithErrorHandling<{ id: number }>(
+      return fetchWithErrorHandling<{ id: number, token: string }>(
         goFetch,
         endpoint,
         undefined,
         {
           method: "POST",
           body: JSON.stringify({ email, password }),
+          headers: {
+            "Content-Type": "application/json"
+          }
         }
       );
     },
     me: async (): Promise<ManifestResponse<{ id?: number; email?: string } | undefined>> => {
       const params = buildSearchParams({});
       const endpoint = buildUrl(`/api/auth/${domain}/me`, params);
+      console.log(endpoint);
       return fetchWithErrorHandling<{ id?: number; email?: string } | undefined>(
         goFetch,
         endpoint,
@@ -261,28 +264,32 @@ export const createCollectionsClient = <Schema extends z.ZodType>(
 
   return {
     list: async (
-      options?: ListOptions<T>
+      options?: ListOptions<T>,
+      requestOptions?: RequestInit
     ): Promise<ManifestResponse<PaginatedResponse<T>>> => {
       const params = buildSearchParams({ ...options, relations });
       const endpoint = buildUrl(`/api/collections/${domain}`, params);
       return fetchWithErrorHandling<PaginatedResponse<T>>(
         goFetch,
         endpoint,
-        paginatedSchema
+        paginatedSchema,
+        requestOptions
       );
     },
 
-    getById: async (id: number): Promise<ManifestResponse<T | null>> => {
+    getById: async (id: number, requestOptions?: RequestInit): Promise<ManifestResponse<T | null>> => {
       const params = buildSearchParams({ relations });
       const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
       return fetchWithErrorHandling<T | null>(
         goFetch,
         endpoint,
-        nullableSchema
+        nullableSchema,
+        requestOptions
       );
     },
     create: async (
-      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>
+      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>,
+      requestOptions?: RequestInit
     ): Promise<ManifestResponse<{ id: number }>> => {
       const params = buildSearchParams({ relations });
       const endpoint = buildUrl(`/api/collections/${domain}`, params);
@@ -293,12 +300,14 @@ export const createCollectionsClient = <Schema extends z.ZodType>(
         {
           method: "POST",
           body: JSON.stringify(data),
+          ...requestOptions
         }
       );
     },
     update: async (
       id: number,
-      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>
+      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>,
+      requestOptions?: RequestInit
     ): Promise<ManifestResponse<{ id: number }>> => {
       const params = buildSearchParams({ relations });
       const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
@@ -309,12 +318,14 @@ export const createCollectionsClient = <Schema extends z.ZodType>(
         {
           method: "PUT",
           body: JSON.stringify(data),
+          ...requestOptions
         }
       );
     },
     patch: async (
       id: number,
-      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>
+      data: DeepPartial<z.infer<Schema>> & Record<string, unknown>,
+      requestOptions?: RequestInit
     ): Promise<ManifestResponse<{ id: number }>> => {
       const params = buildSearchParams({ relations });
       const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
@@ -325,15 +336,14 @@ export const createCollectionsClient = <Schema extends z.ZodType>(
         {
           method: "PATCH",
           body: JSON.stringify(data),
+          ...requestOptions
         }
       );
     },
-    delete: async (id: number): Promise<ManifestResponse<void>> => {
+    delete: async (id: number, requestOptions?: RequestInit): Promise<ManifestResponse<void>> => {
       const params = buildSearchParams({ relations });
       const endpoint = buildUrl(`/api/collections/${domain}/${id}`, params);
-      return fetchWithErrorHandling<void>(goFetch, endpoint, undefined, {
-        method: "DELETE",
-      });
+      return fetchWithErrorHandling<void>(goFetch, endpoint, undefined, requestOptions);
     },
   };
 };
@@ -366,7 +376,7 @@ export const createSinglesClient = <Schema extends z.ZodType>(
 // Main manifest client that provides access to all domain-specific clients
 export const createManifestClient = (goFetch: APIClient) => {
   return {
-    staffAuth: createAuthClient(goFetch, "staff"),
+    staffAuth: createAuthClient(goFetch, "staff-members"),
     adminAuth: createAuthClient(goFetch, "admins"),
     tables: createCollectionsClient(goFetch, "tables", ReconciledTableSchema, [
       "tabs",
@@ -377,8 +387,7 @@ export const createManifestClient = (goFetch: APIClient) => {
       "payments",
       "payments.tabItemsPaids",
     ]),
-    admin: createCollectionsClient(goFetch, "admins", StaffSchema),
-    staff: createCollectionsClient(goFetch, "staff", StaffSchema),
+    staff: createCollectionsClient(goFetch, "staff-members", StaffSchema),
     restaurantConfig: createSinglesClient(
       goFetch,
       "restaurant-settings",
@@ -388,6 +397,7 @@ export const createManifestClient = (goFetch: APIClient) => {
       "tabItems",
       "tabItems.menuItem",
       "tabItems.allergyRestrictions",
+      "closedBy",
     ]),
     tabItems: createCollectionsClient(
       goFetch,

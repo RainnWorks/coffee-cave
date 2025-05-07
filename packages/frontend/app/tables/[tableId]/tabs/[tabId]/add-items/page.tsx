@@ -3,6 +3,7 @@
 import { getServerManifestClient } from "@/lib/manifest/api-client/server";
 import { PageError } from "@/app/tables/components/page-error";
 import AddItemsPageView from "./components/page";
+import { connection } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function AddItemsPage({
     tabId: number;
   }>;
 }) {
+  await connection();
   const { tabId, tableId } = await params;
   const client = await getServerManifestClient();
 

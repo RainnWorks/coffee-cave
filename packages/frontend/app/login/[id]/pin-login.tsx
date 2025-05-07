@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { PinKeypad } from "./pin-keypad";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/manifest/api-client/common";
 import { Staff } from "@/lib/manifest/types";
+import { login } from "./actions/login";
 
 export const PinLogin = ({ staffMember }: { staffMember: Staff }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -24,19 +24,18 @@ export const PinLogin = ({ staffMember }: { staffMember: Staff }) => {
 
     setIsLoading(true);
 
-    const result = await fetch(`${API_URL}/api/staff/login`, {
-      method: "POST",
-      body: JSON.stringify({
-        username: staffMember.username,
-        pin,
-      }),
-    });
-    const data = await result.json();
-    if (data.success === true) {
-      replace("/");
-    } else {
-      setError("Incorrect PIN. Please try again.");
-      setPin("");
+    try {
+      const result = await login(staffMember.username, pin);
+      if (result.success) {
+        replace("/");
+      } else {
+        setError("Incorrect PIN. Please try again.");
+        setPin("");
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error(error);
+      setError("An error occurred during login");
       setIsLoading(false);
     }
   };

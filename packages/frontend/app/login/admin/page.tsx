@@ -31,6 +31,7 @@ export default function EmailPasswordLogin() {
     try {
       const response = await fetch(`${API_URL}/api/auth/admins/login`, {
         method: "POST",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
         },
@@ -68,7 +69,9 @@ export default function EmailPasswordLogin() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <CardTitle className="text-2xl flex-1 text-center">Admin Login</CardTitle>
+            <CardTitle className="text-2xl flex-1 text-center">
+              Admin Login
+            </CardTitle>
           </div>
         </div>
       </CardHeader>

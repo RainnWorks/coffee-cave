@@ -1,7 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
-import { NewTableSkeleton } from "@/components/new-table-skeleton";
 import type React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -63,8 +61,9 @@ export function NewTableForm() {
       const newTable = await client.tables.create({
         seats: Number(seats),
         name: tableNumber,
+        closed: false,
         notes: notes,
-        createdAt: DateTime.now().toISO()
+        createdAt: DateTime.now().toISO(),
       });
 
       toast.success("Table Created");
@@ -194,11 +193,5 @@ export function NewTableForm() {
 }
 
 export default function NewTablePage() {
-  return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Suspense fallback={<NewTableSkeleton />}>
-        <NewTableForm />
-      </Suspense>
-    </main>
-  );
+  return <NewTableForm />;
 }

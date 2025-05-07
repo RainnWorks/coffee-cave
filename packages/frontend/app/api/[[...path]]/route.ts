@@ -1,8 +1,10 @@
+import { connection } from "next/server";
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.BACKEND_API_URL || "http://localhost:1111"; // The actual URL of your API
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 /**
  * Helper function to handle the request proxying
@@ -16,27 +18,29 @@ async function proxyRequest(
   const targetUrl = `${API_URL}/api/${path.join("/")}${
     searchParams ? `?${searchParams.toString()}` : ""
   }`;
-  console.log(targetUrl);
+
+  // Get the request body only once and store it for reuse
+  const bodyBlob =
+    request.method !== "GET" && request.method !== "HEAD"
+      ? await request.blob()
+      : null;
+
   // Get all request headers
   const headers = new Headers(request.headers);
 
+  const cookie = await cookies();
+
   // Get the auth_token cookie if it exists and add to Authorization header
-  const authToken = request.cookies.get("auth_token");
+  const authToken = cookie.get("auth_token");
   if (authToken) {
     headers.set("Authorization", `Bearer ${authToken.value}`);
   }
 
-  // Remove host header to avoid conflicts
-  headers.delete("host");
-
-  // Clone the request with the new URL and headers
+  // Set up the request init with the body we already read
   const requestInit: RequestInit = {
     method: request.method,
     headers: headers,
-    body:
-      request.method !== "GET" && request.method !== "HEAD"
-        ? await request.blob()
-        : undefined,
+    body: bodyBlob || undefined,
     cache: "no-store",
   };
 
@@ -66,7 +70,7 @@ async function proxyRequest(
       {
         status: 500,
         headers: {
-          "Content-Type": "application/json",
+          "content-type": "application/json",
         },
       }
     );
@@ -82,6 +86,7 @@ export async function GET(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await result.params).path || [],
@@ -97,6 +102,7 @@ export async function POST(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await params).path || [],
@@ -112,6 +118,7 @@ export async function PUT(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await params).path || [],
@@ -127,6 +134,7 @@ export async function DELETE(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await params).path || [],
@@ -142,6 +150,7 @@ export async function PATCH(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await params).path || [],
@@ -157,6 +166,7 @@ export async function HEAD(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await params).path || [],
@@ -172,6 +182,7 @@ export async function OPTIONS(
     params: Promise<{ path: string[] }>;
   }
 ) {
+  await connection();
   return proxyRequest(
     request,
     (await params).path || [],

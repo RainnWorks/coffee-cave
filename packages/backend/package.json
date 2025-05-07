@@ -1,5 +1,5 @@
 {
-  "name": "coffee-cave-backend",
+  "name": "backend",
   "version": "0.1.0",
   "description": "A project made with Manifest",
   "scripts": {
@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "dmno": "^0.0.39",
-    "lucide-static": "^0.487.0",
-    "manifest": "^4.11.2"
+    "lucide-static": "^0.507.0",
+    "manifest": "^4.11.10"
   },
   "packageManager": "yarn@4.8.1"
 }

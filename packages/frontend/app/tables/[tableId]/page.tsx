@@ -10,7 +10,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CreateTabButton } from "./components/create-tab-button";
 
-import { parseAsInteger, createLoader, SearchParams } from "nuqs/server";
+import {
+  parseAsInteger,
+  createLoader,
+  SearchParams,
+  parseAsBoolean,
+} from "nuqs/server";
 import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { DynamicIcon } from "lucide-react/dynamic";
@@ -20,17 +25,24 @@ import { createCurrencyFormatter } from "@/lib/currency";
 import Link from "next/link";
 import { groupItems } from "@/lib/basket";
 import { DateTime } from "luxon";
-import { AddItemsLink } from "./tabs/[tabId]/add-items/components/add-items-link";
+import { AddItemsLink } from "./components/add-items-link";
+import { CloseTabButton } from "./components/close-tab-button";
+import { Switch } from "@/components/ui/switch";
+import { connection } from "next/server";
+import { CloseTableButton } from "./components/close-table-button";
+import { Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export const searchParams = {
   tabId: parseAsInteger,
+  showClosedTabs: parseAsBoolean,
 };
 
 export const loadSearchParams = createLoader(searchParams, {
   urlKeys: {
     tabId: "tid",
+    showClosedTabs: "sct",
   },
 });
 
@@ -43,6 +55,7 @@ export default async function TableDetailView({
   params,
   searchParams,
 }: PageProps) {
+  await connection();
   const tableId = (await params).tableId;
 
   const client = await getServerManifestClient();
@@ -69,10 +82,15 @@ export default async function TableDetailView({
     );
   }
 
-  const { tabId } = await loadSearchParams(searchParams);
+  const { tabId, showClosedTabs } = await loadSearchParams(searchParams);
   const tableData = result;
   const activeTabId = tabId ?? tableData.tabs?.[0]?.id;
   const activeTab = tableData.tabs?.find((tab) => tab.id === activeTabId);
+
+  if (activeTab?.closed && !showClosedTabs) {
+    const firstUnclosedTab = tableData.tabs?.find((tab) => !tab.closed);
+    redirect(`/tables/${tableId}?tid=${firstUnclosedTab?.id}`);
+  }
 
   const activeTabItems = Object.values(
     groupItems(
@@ -108,7 +126,7 @@ export default async function TableDetailView({
   // ).toSorted((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <Card className="w-full max-w-4xl shadow-lg">
+    <Card className="w-full lg:max-w-4xl shadow-lg">
       <CardHeader className="border-b bg-gray-100 p-0">
         <div className="flex sm:items-center sm:justify-between flex-col sm:flex-row gap-6 p-6">
           <div className="flex items-center">
@@ -135,6 +153,10 @@ export default async function TableDetailView({
           </div>
 
           <div className="flex gap-3 flex-wrap">
+            <CloseTableButton
+              tableId={tableData.id}
+              locked={tableData.remainingBalance > 0}
+            />
             <Button
               className={cn("flex-shrink-0 flex-grow px-10 h-10", {
                 "pointer-events-none opacity-50":
@@ -169,26 +191,53 @@ export default async function TableDetailView({
       {(tableData.tabs?.length ?? 0) > 0 && (
         <div className="flex border-b bg-gray-50 justify-between items-center gap-4">
           <div className="flex flex-col flex-1 gap-2 p-4 ">
-            <div className="text-sm text-gray-500">Tabs</div>
+            <div className="flex space-x-4 items-center h-10">
+              <div className="text-sm text-gray-500">Tabs</div>
+              <Link
+                className="flex items-center gap-1 text-sm"
+                href={`/tables/${
+                  tableData.id
+                }?tid=${activeTabId}&sct=${!showClosedTabs}`}
+              >
+                <Switch  checked={!!showClosedTabs}></Switch>
+                Show Closed Tabs
+              </Link>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {tableData.tabs?.map((tab) => {
-                return (
-                  <Link
-                    href={`/tables/${tableData.id}?tid=${tab.id}`}
-                    key={"tab-" + tab.id}
-                    className={cn(
-                      buttonVariants({
-                        variant: activeTabId === tab.id ? "default" : "outline",
-                      })
-                    )}
-                  >
-                    {tab.name}
-                    <span className="ml-1">
-                      ({formatCurrency(tab.remainingBalance)})
-                    </span>
-                  </Link>
-                );
-              })}
+              {tableData.tabs
+                ?.filter((tab) => (showClosedTabs ? true : !tab.closed))
+                .map((tab) => {
+                  return (
+                    <Link
+                      href={`/tables/${tableData.id}?tid=${tab.id}&sct=${!!showClosedTabs}`}
+                      key={"tab-" + tab.id}
+                      className={cn(
+                        buttonVariants({
+                          variant:
+                            activeTabId === tab.id ? "default" : "outline",
+                        }),
+                        "relative"
+                      )}
+                    >
+                      {tab.closed && (
+                        <Lock
+                          className={cn(
+                            "absolute -top-1 -right-1 h-4 w-4",
+                            tab.closed
+                              ? activeTabId === tab.id
+                                ? "text-yellow-600"
+                                : "text-gray-300"
+                              : ""
+                          )}
+                        />
+                      )}
+                      {tab.name}
+                      <span className="tabular-nums">
+                        ({formatCurrency(tab.remainingBalance)})
+                      </span>
+                    </Link>
+                  );
+                })}
             </div>
           </div>
 
@@ -219,7 +268,10 @@ export default async function TableDetailView({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium">{activeTab.name}</h3>
+                <h3 className="text-lg font-medium">
+                  {activeTab.name}
+                  {activeTab.closed ? " (Closed)" : ""}
+                </h3>
                 <div className="mt-1 flex items-center text-sm text-gray-500">
                   <Clock className="mr-1 h-3.5 w-3.5" />
                   <span>
@@ -237,11 +289,23 @@ export default async function TableDetailView({
               <div className="flex items-center justify-between border-b bg-gray-50 p-3">
                 <h4 className="font-medium">Items</h4>
                 <div className="flex gap-2">
-                  <AddItemsLink
-                    tableId={tableData.id}
-                    tabId={activeTab.id}
-                    locked={activeTab.locked}
-                  />
+                  {!activeTab.closed ? (
+                    <>
+                      <CloseTabButton
+                        tableId={tableData.id}
+                        tabId={activeTab.id}
+                        locked={
+                          activeTab?.tabItems.some((item) => !item.paid) ??
+                          false
+                        }
+                      />
+                      <AddItemsLink
+                        tableId={tableData.id}
+                        tabId={activeTab.id}
+                        locked={activeTab.locked}
+                      />
+                    </>
+                  ) : null}
                 </div>
               </div>
 

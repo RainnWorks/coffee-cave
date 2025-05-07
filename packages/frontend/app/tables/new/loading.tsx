@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export function NewTableSkeleton() {
+export default function NewTableSkeleton() {
   return (
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader className="border-b bg-gray-100">

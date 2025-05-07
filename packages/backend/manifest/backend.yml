@@ -53,6 +53,7 @@ entities:
     properties:
       - { name: name, type: string }
       - { name: seats, type: number }
+      - { name: closed, type: boolean }
       - { name: closedAt, type: timestamp }
       - { name: createdAt, type: timestamp }
       - { name: notes, type: text }
@@ -114,7 +115,10 @@ entities:
     properties:
       - { name: "createdAt", type: timestamp }
       - { name: locked, type: boolean }
+      - { name: closed, type: boolean }
+      - { name: closedAt, type: timestamp }
     belongsTo:
+      - { name: closedBy, entity: Staff }
       - { name: table, entity: Table }
       - { name: createdBy, entity: Staff }
     policies:

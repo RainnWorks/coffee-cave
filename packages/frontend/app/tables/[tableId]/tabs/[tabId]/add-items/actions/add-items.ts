@@ -28,5 +28,7 @@ export async function addItems(tabId: number, items: BasketItem[]) {
       });
     })
   );
+
+  console.log(tabItems);
   return tabItems;
 }

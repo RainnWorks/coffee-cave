@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Page, PageContent, PageHeader, PageTitle } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { ArrowLeft, Plus, ChefHat, Settings } from "lucide-react";
@@ -5,10 +6,26 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TableCard } from "@/app/tables/components/table-card";
 import { getServerManifestClient } from "@/lib/manifest/api-client/server";
+import { createLoader, parseAsBoolean, SearchParams } from "nuqs/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function TablesView() {
+export const searchParams = {
+  showClosedTabs: parseAsBoolean,
+};
+
+export const loadSearchParams = createLoader(searchParams, {
+  urlKeys: {
+    showClosedTabs: "sct",
+  },
+});
+
+export default async function TablesView({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  connection();
   const client = await getServerManifestClient();
   const { errorMessage: configErrorMessage, result: config } =
     await client.restaurantConfig.get();
@@ -25,12 +42,24 @@ export default async function TablesView() {
     );
   }
 
-  const { errorMessage, result } = await client.tables.list({
-    order: {
-      order: "ASC",
-      orderBy: "createdAt",
+  const { showClosedTabs } = await loadSearchParams(searchParams);
+
+  const { errorMessage, result } = await client.tables.list(
+    {
+      filters: !showClosedTabs
+        ? {
+            closed_eq: false,
+          }
+        : undefined,
+      order: {
+        order: "ASC",
+        orderBy: "createdAt",
+      },
     },
-  });
+    {
+      cache: "no-store",
+    }
+  );
 
   const tables = result?.data ?? [];
 

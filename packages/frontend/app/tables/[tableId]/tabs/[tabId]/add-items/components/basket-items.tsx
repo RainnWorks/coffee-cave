@@ -238,83 +238,77 @@ export const BasketItems = ({
             </DialogTitle>
           </DialogHeader>
 
-          {(editingItem?.maxQuantity ?? 0) > 1 && (
-            <div className="py-4 space-y-6">
-              {/* Quantity Section - Prominently displayed at the top */}
-              <div className="bg-muted/30 p-4 rounded-lg border">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">How many?</h3>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-12 w-12 rounded-full text-lg"
-                      onClick={decrementQuantity}
-                    >
-                      <Minus className="h-5 w-5" />
-                    </Button>
-                    <div className="text-2xl font-bold min-w-[40px] text-center tabular-nums">
-                      {editingItem?.quantity}
-                      <span className="text-sm font-normal">
-                        {" "}
-                        / {editingItem?.maxQuantity}
-                      </span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-12 w-12 rounded-full text-lg"
-                      onClick={incrementQuantity}
-                    >
-                      <Plus className="h-5 w-5" />
-                    </Button>
-                  </div>
+          {/* Quantity Section - Prominently displayed at the top */}
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">How many?</h3>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 rounded-full text-lg"
+                  onClick={decrementQuantity}
+                >
+                  <Minus className="h-5 w-5" />
+                </Button>
+                <div className="text-2xl font-bold min-w-[40px] text-center tabular-nums">
+                  {editingItem?.quantity}
+                  <span className="text-sm font-normal">
+                    {" "}
+                    / {editingItem?.maxQuantity}
+                  </span>
                 </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 rounded-full text-lg"
+                  onClick={incrementQuantity}
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
               </div>
             </div>
-          )}
+          </div>
 
-          <div className="py-4 space-y-6">
-            {/* Allergens Section */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium">Allergies</h3>
-              <div className="flex flex-wrap gap-2">
-                {allergens.map((allergen) => (
-                  <Badge
-                    key={allergen.id}
-                    variant={
-                      editingItem?.allergenIds.includes(allergen.id)
-                        ? "default"
-                        : "outline"
-                    }
-                    className={cn(
-                      "cursor-pointer text-base py-2 px-4 h-10",
-                      editingItem?.allergenIds.includes(allergen.id)
-                        ? "bg-red-100 hover:bg-red-200 text-red-800 hover:text-red-900 border-red-200"
-                        : "hover:bg-muted"
-                    )}
-                    onClick={() => toggleAllergen(allergen.id)}
-                  >
-                    <DynamicIcon
-                      className="h-6 w-6"
-                      name={allergen.icon as IconName}
-                    />
-                    {allergen.name}
-                  </Badge>
-                ))}
-              </div>
+          {/* Allergens Section */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium">Allergies</h3>
+            <div className="flex flex-wrap gap-2">
+              {allergens.map((allergen) => (
+                <Badge
+                  key={allergen.id}
+                  variant={
+                    editingItem?.allergenIds.includes(allergen.id)
+                      ? "default"
+                      : "outline"
+                  }
+                  className={cn(
+                    "cursor-pointer text-base py-2 px-4 h-10",
+                    editingItem?.allergenIds.includes(allergen.id)
+                      ? "bg-red-100 hover:bg-red-200 text-red-800 hover:text-red-900 border-red-200"
+                      : "hover:bg-muted"
+                  )}
+                  onClick={() => toggleAllergen(allergen.id)}
+                >
+                  <DynamicIcon
+                    className="h-6 w-6"
+                    name={allergen.icon as IconName}
+                  />
+                  {allergen.name}
+                </Badge>
+              ))}
             </div>
+          </div>
 
-            {/* Notes Section */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium">Notes</h3>
-              <Textarea
-                value={editingItem?.notes}
-                onChange={(e) => setEditedNotes(e.target.value)}
-                placeholder="Add special instructions..."
-                className="text-base min-h-[100px]"
-              />
-            </div>
+          {/* Notes Section */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium">Notes</h3>
+            <Textarea
+              value={editingItem?.notes}
+              onChange={(e) => setEditedNotes(e.target.value)}
+              placeholder="Add special instructions..."
+              className="text-base min-h-[100px]"
+            />
           </div>
 
           <DialogFooter className="flex gap-3">

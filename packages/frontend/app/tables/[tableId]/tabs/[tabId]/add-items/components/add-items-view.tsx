@@ -65,7 +65,7 @@ export const AddItemsView = ({
             </Link>
             <div>
               <CardTitle className="text-2xl">Add Items</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">Table {table.id}</p>
+              <p className="text-sm text-gray-500 mt-1">Table {table.name}</p>
             </div>
           </div>
           <Badge className="text-lg py-1.5 px-3">
@@ -147,7 +147,11 @@ export const AddItemsView = ({
           <div className="text-lg font-bold">
             Total: <BasketTotal menuItems={allMenuItems} />
           </div>
-          <Button onClick={onClickRecap} className="gap-2">
+          <Button
+            onClick={onClickRecap}
+            className="gap-2"
+            disabled={count === 0}
+          >
             <ClipboardList className="h-4 w-4 mr-2" />
             Review & Confirm
           </Button>

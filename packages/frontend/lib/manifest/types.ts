@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 export const RestaurantConfigSchema = z.object({
   name: z.string(),
@@ -61,17 +61,6 @@ export const CategoryWithMenuItemsSchema = CategorySchema.extend({
 });
 export type CategoryWithMenuItems = z.infer<typeof CategoryWithMenuItemsSchema>;
 
-export type TabItem = z.infer<typeof TabItemSchema>;
-
-export const TabSchema = z.object({
-  id: z.number(),
-  tabItems: z.array(TabItemWithMenuItemSchema),
-  createdAt: z.string().datetime(),
-  locked: z.coerce.boolean().default(false),
-});
-
-export type RestaurantConfig = z.infer<typeof RestaurantConfigSchema>;
-
 export const StaffSchema = z.object({
   id: z.number(),
   username: z.string(),
@@ -81,7 +70,19 @@ export const StaffSchema = z.object({
 
 export type Staff = z.infer<typeof StaffSchema>;
 
+export type TabItem = z.infer<typeof TabItemSchema>;
 
+export const TabSchema = z.object({
+  id: z.number(),
+  tabItems: z.array(TabItemWithMenuItemSchema),
+  createdAt: z.string().datetime(),
+  closed: z.boolean().optional().nullable().default(false),
+  closedAt: z.string().optional().nullable(),
+  closedBy: StaffSchema.optional().nullable(),
+  locked: z.coerce.boolean().default(false),
+});
+
+export type RestaurantConfig = z.infer<typeof RestaurantConfigSchema>;
 
 export type Tab = z.infer<typeof TabSchema>;
 
@@ -100,7 +101,9 @@ export const TableSchema = z.object({
   name: z.string(),
   tabs: z.array(TabSchema).optional(),
   seats: z.number(),
+  closed: z.boolean().optional().nullable().default(false),
   createdAt: z.string().datetime(),
+  closedAt: z.string().optional().nullable(),
   payments: z.array(PaymentSchema).optional(),
   notes: z.string().optional().nullable(),
 });

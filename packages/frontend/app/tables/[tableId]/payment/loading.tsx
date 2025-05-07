@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PaymentSkeleton() {
   return (
-    <Card className="w-full max-w-4xl shadow-lg">
+    <Card className="w-full lg:max-w-4xl shadow-lg">
       <CardHeader className="border-b bg-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center">

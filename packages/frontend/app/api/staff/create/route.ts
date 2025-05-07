@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     
     // Prepare headers
     const headers: HeadersInit = {
-      "Content-Type": "application/json",
+      "content-type": "application/json",
     };
     
     // Add Authorization header if auth_token exists
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     // Forward the request to the backend API
     const response = await fetch(`${API_URL}/api/auth/staff/signup`, {
       method: "POST",
+      cache: 'no-cache',
       headers,
       body: JSON.stringify({
         email: buildEmail(username),

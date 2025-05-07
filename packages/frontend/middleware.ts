@@ -2,14 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getServerManifestClient } from './lib/manifest/api-client/server';
 
-const AUTH_PATHS = ['/', '/login'];
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  console.log('Running on ' + pathname);
-  if (AUTH_PATHS.includes(pathname)) {
-    return NextResponse.next();
-  }
 
   const client = await getServerManifestClient();
 
