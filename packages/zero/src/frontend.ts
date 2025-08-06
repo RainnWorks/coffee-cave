@@ -1,13 +1,14 @@
 // createFrontendRouter.ts
-import type { Express } from "express";
+import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function createFrontendRouter(app: Express) {
+export async function createFrontendRouter(): Promise<express.Router> {
+  const router = express.Router();
+
   if (process.env.NODE_ENV !== "production") {
-    // Dev mode: use Vite middleware
     const { createServer: createViteServer } = await import("vite");
     const configFile = path.resolve(__dirname, "..", "vite.config.ts");
 
@@ -17,31 +18,35 @@ export async function createFrontendRouter(app: Express) {
       appType: "spa",
       server: { middlewareMode: true },
     });
-    app.use(vite.middlewares);
+
+    router.use(vite.middlewares);
   } else {
-    // Prod mode: serve built frontend with Bun.file()
-    app.use(async (req, res, next) => {
-      const filePath = path.join(
-        __dirname,
-        "client",
-        "dist",
-        req.path === "/" || req.path === "" ? "index.html" : req.path
-      );
+    const distDir = path.join(__dirname, "client", "dist");
 
+    // Serve static files
+    router.use(
+      express.static(distDir, {
+        maxAge: "1y",
+        immutable: true,
+      })
+    );
+
+    // Fallback to index.html for client-side routes
+    router.use("*", async (_, res, next) => {
       try {
-        const file = Bun.file(filePath);
-        if (await file.exists()) {
-          if (file.type) {
-            res.setHeader("Content-Type", file.type);
-          }
-          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-          return res.send(await file.arrayBuffer());
+        const indexFile = Bun.file(path.join(distDir, "index.html"));
+        if (await indexFile.exists()) {
+          const html = await indexFile.text();
+          res.setHeader("Content-Type", "text/html");
+          return res.status(200).send(html);
+        } else {
+          return res.status(500).send("index.html missing");
         }
-      } catch {
-        // ignore and fall through
+      } catch (err) {
+        next(err);
       }
-
-      next();
     });
   }
+
+  return router;
 }

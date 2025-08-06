@@ -43,7 +43,8 @@ app.post("/push", express.raw({ type: "*/*" }), async (req, res) => {
 app.use(admin.options.rootPath, adminRouter);
 
 // Frontend router (dev: vite, prod: Bun.file)
-await createFrontendRouter(app);
+const frontendRouter = await createFrontendRouter();
+app.use(frontendRouter);
 
 // === Start HTTP server inside Bun ===
 const server = createServer(app);

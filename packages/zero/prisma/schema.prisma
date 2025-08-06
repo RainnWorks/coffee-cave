@@ -40,6 +40,10 @@ model Staff {
 
     pinHash String @db.VarChar // Hashed PIN for regular access
     pinSalt String @db.VarChar // Salt for the PIN
+    
+    // Stateless auth fields
+    credVersion Int      @default(1) // Increment to invalidate all JWTs
+    disabledAt  DateTime? // If set, user is disabled
 
     // Relationships
     createdMenuItems MenuItem[] @relation("menuItem_createdBy")
@@ -56,6 +60,10 @@ model Admin {
     email        String? @db.VarChar // Optional email, primarily for admin users
     passwordHash String  @db.VarChar // Admin password for elevated access
     passwordSalt String  @db.VarChar // Salt for the password
+    
+    // Stateless auth fields
+    credVersion Int      @default(1) // Increment to invalidate all JWTs
+    disabledAt  DateTime? // If set, user is disabled
 
     // Link to the associated Staff member
     staffId String @unique @db.VarChar

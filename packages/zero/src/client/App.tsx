@@ -1,15 +1,11 @@
 import { Zero } from "@rocicorp/zero";
 import { schema, type Schema } from "../schema";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-
-// Initialize Zero with the schema
-const z = new Zero({
-  server: "http://localhost:4848",
-  userID: "dashboard-user",
-  schema,
-});
+import { useAuth } from "./AuthedZeroProvider";
+import LoginForm from "./LoginForm";
 
 export default function App() {
+  const { isLoggedIn, isLoading, error } = useAuth();
   const z = useZero<Schema>();
 
   const [categories, { type }] = useQuery(

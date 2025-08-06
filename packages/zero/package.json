@@ -17,6 +17,7 @@
   "devDependencies": {
     "@passionfroot/prisma-generator-zero": "^0.4.0",
     "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.10",
     "prisma": "^6.13.0",
     "tailwindcss": "^4.1.11",
     "vite": "^7.0.6"
@@ -28,6 +29,7 @@
     "@adminjs/sequelize": "^4.1.1",
     "@dmno/vite-integration": "^0.0.16",
     "@prisma/client": "^6.13.0",
+    "@react-router/dev": "^7.7.1",
     "@rocicorp/zero": "^0.22.2025080200",
     "@tailwindcss/vite": "^4.1.11",
     "@tiptap/extension-horizontal-rule": "2.1.13",
@@ -36,8 +38,11 @@
     "argon2": "^0.43.1",
     "dmno": "^0.0.39",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.1.5",
     "pg": "^8.16.3",
+    "react-router": "^7.7.1",
     "sequelize": "^6.37.7"
   }
 }

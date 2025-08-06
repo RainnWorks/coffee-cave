@@ -34,6 +34,8 @@ export const staffTable = table("staff")
     lastName: string(),
     pinHash: string(),
     pinSalt: string(),
+    credVersion: number(),
+    disabledAt: number().optional(),
   })
   .primaryKey("id");
 
@@ -43,6 +45,8 @@ export const adminTable = table("admin")
     email: string().optional(),
     passwordHash: string(),
     passwordSalt: string(),
+    credVersion: number(),
+    disabledAt: number().optional(),
     staffId: string(),
   })
   .primaryKey("id");
