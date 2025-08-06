@@ -76,17 +76,6 @@ export default function EmailPasswordLogin() {
         </div>
       </CardHeader>
       <CardContent className="p-6 flex flex-col gap-4">
-        <Link href="/login">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Back to staff selection"
-            className="flex items-center gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-        </Link>{" "}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

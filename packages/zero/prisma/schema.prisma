@@ -1,0 +1,229 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+generator zero {
+    provider     = "prisma-generator-zero"
+    output       = "../src/generated/"
+    relationMode = "prisma"
+    enumAsUnion  = true
+    prettier     = true
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("ZERO_UPSTREAM_DB")
+}
+
+// Restaurant settings
+model RestaurantSettings {
+    id             String   @id @db.VarChar @default("singleton")
+    name           String   @db.VarChar
+    currencyCode   String   @db.VarChar
+    currencyLocale String   @db.VarChar
+    primaryColor   String   @db.VarChar
+    secondaryColor String   @db.VarChar
+    timeZone       String   @db.VarChar
+    coinsAndNotes  String   @db.VarChar
+
+    @@map("restaurant_settings")
+}
+
+// Staff members
+model Staff {
+    id        String @id @db.VarChar
+    firstName String @db.VarChar
+    lastName  String @db.VarChar
+
+    pinHash String @db.VarChar // Hashed PIN for regular access
+    pinSalt String @db.VarChar // Salt for the PIN
+
+    // Relationships
+    createdMenuItems MenuItem[] @relation("menuItem_createdBy")
+    createdTabs      Tab[]      @relation("tab_createdBy")
+    closedTabs       Tab[]      @relation("tab_closedBy")
+    adminAccount     Admin? // Optional link to an Admin account
+
+    @@map("staff")
+}
+
+// Admin users with elevated privileges
+model Admin {
+    id           String  @id @db.VarChar
+    email        String? @db.VarChar // Optional email, primarily for admin users
+    passwordHash String  @db.VarChar // Admin password for elevated access
+    passwordSalt String  @db.VarChar // Salt for the password
+
+    // Link to the associated Staff member
+    staffId String @unique @db.VarChar
+    staff   Staff  @relation(fields: [staffId], references: [id])
+
+    @@map("admin")
+}
+
+// Restaurant tables
+model RestaurantTable {
+    id        String   @id @db.VarChar
+    name      String   @db.VarChar
+    seats     Int
+    closed    Boolean?
+    closedAt  Float?
+    createdAt Float?
+    notes     String?  @db.VarChar
+
+    // Relationships
+    tabs     Tab[]     @relation("tab_table")
+    payments Payment[] @relation("payment_table")
+
+    @@map("restaurant_table")
+}
+
+// Menu categories
+model Category {
+    id   String  @id @db.VarChar
+    name String  @db.VarChar
+    icon String? @db.VarChar
+
+    // Relationships
+    menuItems MenuItemCategory[]
+
+    @@map("category")
+}
+
+// Allergens
+model Allergen {
+    id   String  @id @db.VarChar
+    name String  @db.VarChar
+    icon String? @db.VarChar
+
+    // Relationships
+    menuItems           MenuItemAllergen[]
+    tabItemRestrictions TabItemAllergyRestriction[]
+
+    @@map("allergen")
+}
+
+// Menu items
+model MenuItem {
+    id          String  @id @db.VarChar
+    name        String  @db.VarChar
+    price       Float
+    createdByID String? @db.VarChar
+
+    // Relationships
+    createdBy  Staff?             @relation("menuItem_createdBy", fields: [createdByID], references: [id], onDelete: SetNull)
+    categories MenuItemCategory[]
+    allergens  MenuItemAllergen[]
+    tabItems   TabItem[]
+
+    @@map("menu_item")
+}
+
+// Junction table for menu items and categories
+model MenuItemCategory {
+    menuItemID String @db.VarChar
+    categoryID String @db.VarChar
+
+    // Relationships
+    menuItem MenuItem @relation(fields: [menuItemID], references: [id], onDelete: Cascade)
+    category Category @relation(fields: [categoryID], references: [id], onDelete: Cascade)
+
+    @@id([menuItemID, categoryID])
+    @@map("menu_item_category")
+}
+
+// Junction table for menu items and allergens
+model MenuItemAllergen {
+    allergenID String @db.VarChar
+    menuItemID String @db.VarChar
+
+    // Relationships
+    menuItem MenuItem @relation(fields: [menuItemID], references: [id], onDelete: Cascade)
+    allergen Allergen @relation(fields: [allergenID], references: [id], onDelete: Cascade)
+
+    @@id([menuItemID, allergenID])
+    @@map("menu_item_allergen")
+}
+
+// Tabs (orders)
+model Tab {
+    id          String   @id @db.VarChar
+    createdAt   Float?
+    locked      Boolean?
+    closed      Boolean?
+    closedAt    Float?
+    closedByID  String?  @db.VarChar
+    tableID     String?  @db.VarChar
+    createdByID String?  @db.VarChar
+
+    // Relationships
+    createdBy Staff?           @relation("tab_createdBy", fields: [createdByID], references: [id], onDelete: SetNull)
+    closedBy  Staff?           @relation("tab_closedBy", fields: [closedByID], references: [id], onDelete: SetNull)
+    table     RestaurantTable? @relation("tab_table", fields: [tableID], references: [id], onDelete: SetNull)
+    items     TabItem[]
+
+    @@map("tab")
+}
+
+// Tab items (items in an order)
+model TabItem {
+    id            String  @id @db.VarChar
+    notes         String? @db.VarChar
+    nameOverride  String? @db.VarChar
+    priceOverride Float?
+    createdAt     Float?
+    tabID         String  @db.VarChar
+    menuItemID    String? @db.VarChar
+
+    // Relationships
+    tab                 Tab                         @relation(fields: [tabID], references: [id], onDelete: Cascade)
+    menuItem            MenuItem?                   @relation(fields: [menuItemID], references: [id], onDelete: SetNull)
+    allergyRestrictions TabItemAllergyRestriction[]
+    payments            PaymentTabItemPaid[]
+
+    @@map("tab_item")
+}
+
+// Junction table for tab items and allergen restrictions
+model TabItemAllergyRestriction {
+    tabItemID  String @db.VarChar
+    allergenID String @db.VarChar
+
+    // Relationships
+    tabItem  TabItem  @relation(fields: [tabItemID], references: [id], onDelete: Cascade)
+    allergen Allergen @relation(fields: [allergenID], references: [id], onDelete: Cascade)
+
+    @@id([tabItemID, allergenID])
+    @@map("tab_item_allergy_restriction")
+}
+
+// Payments
+model Payment {
+    id        String  @id @db.VarChar
+    amount    Float
+    notes     String? @db.VarChar
+    createdAt Float?
+    tableID   String? @db.VarChar
+
+    // Relationships
+    table    RestaurantTable?     @relation("payment_table", fields: [tableID], references: [id], onDelete: SetNull)
+    tabItems PaymentTabItemPaid[]
+
+    @@map("payment")
+}
+
+// Junction table for payments and tab items
+model PaymentTabItemPaid {
+    paymentID String @db.VarChar
+    tabItemID String @db.VarChar
+
+    // Relationships
+    payment Payment @relation(fields: [paymentID], references: [id], onDelete: Cascade)
+    tabItem TabItem @relation(fields: [tabItemID], references: [id], onDelete: Cascade)
+
+    @@id([paymentID, tabItemID])
+    @@map("payment_tab_item_paid")
+}

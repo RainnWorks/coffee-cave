@@ -20,5 +20,14 @@
     "dmno": "^0.0.39",
     "express": "^5.1.0",
     "livereload": "^0.9.3"
-  }
+  },
+  "overrides": {
+    "@tiptap/core": "2.26.1",
+    "@tiptap/pm": "2.26.1",
+    "@tiptap/starter-kit": "2.26.1",
+    "@tiptap/extension-horizontal-rule": "2.26.1"
+  },
+  "trustedDependencies": [
+    "@rocicorp/zero-sqlite3"
+  ]
 }
