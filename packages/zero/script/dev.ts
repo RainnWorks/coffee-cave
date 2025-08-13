@@ -1,10 +1,37 @@
-import { bunRun } from "./bun-runner";
+import concurrently from "concurrently";
+// Parallel services using concurrently API
+console.log("🎯 Starting development services...");
 
-await bunRun({
-  up: [
-    "bun run dev:db-up",
-    "bun run dev:db-reset",
-    ["bun run dev:zero-cache", "bun run dev:server"],
+const { result } = concurrently(
+  [
+    {
+      command: "bun run dev:zero-cache",
+      name: "zero-cache",
+      prefixColor: "cyan",
+    },
+    {
+      command: "bun run dev:server",
+      name: "server",
+      prefixColor: "magenta",
+    },
+    {
+      command: "bun run dev:frontend",
+      name: "frontend",
+      prefixColor: "yellow",
+    },
   ],
-  down: ["bun run dev:db-down"],
-});
+  {
+    prefix: "name",
+    restartTries: 3,
+    killOthersOn: "failure",
+  }
+);
+
+result.then(
+  () => {
+    console.log("✅ All services completed successfully");
+  },
+  () => {
+    process.exit(1);
+  }
+);

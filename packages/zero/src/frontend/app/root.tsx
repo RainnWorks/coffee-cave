@@ -1,5 +1,4 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
-import { AuthedZeroProvider } from "./AuthedZeroProvider";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,16 +19,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function Root() {
-  const server = import.meta.env.VITE_PUBLIC_SERVER;
-
-  if (!server) {
-    throw new Error("VITE_PUBLIC_SERVER environment variable is required");
-  }
-
+export default function App() {
   return (
-    <AuthedZeroProvider serverUrl={server!}>
       <Outlet />
-    </AuthedZeroProvider>
   );
+}
+
+export function ErrorBoundary() {
+  return <div>Something went wrong</div>;
 }

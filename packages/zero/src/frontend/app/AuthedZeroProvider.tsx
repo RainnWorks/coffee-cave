@@ -1,15 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ZeroProvider } from '@rocicorp/zero/react';
-import { 
-  loginWithStaffPin, 
-  loginWithAdminCredentials, 
-  logout, 
-  isAuthenticated, 
-  createZeroAuthFunction, 
-  getZeroUserID,
-  AuthError 
-} from './auth';
-import { schema } from '../schema';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { ZeroProvider } from "@rocicorp/zero/react";
+import { createAuthClient, AuthError } from "./auth";
+import { schema } from "../../schema";
 
 /**
  * Authentication context - only for auth operations
@@ -21,7 +13,7 @@ interface AuthContextType {
   userID: string | null;
   isLoading: boolean;
   error: string | null;
-  
+
   // Authentication methods
   loginStaff: (staffId: string, pin: string) => Promise<void>;
   loginAdmin: (email: string, password: string) => Promise<void>;
@@ -33,18 +25,22 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 /**
  * AuthedZeroProvider - Wraps ZeroProvider with authentication
- * 
+ *
  * This component handles authentication state and wraps the app with ZeroProvider
  * when authenticated. Use standard useZero hook for Zero operations.
  */
-export const AuthedZeroProvider: React.FC<{ 
+export const AuthedZeroProvider: React.FC<{
   children: React.ReactNode;
-  serverUrl: string;
-}> = ({ children, serverUrl }) => {
+  zeroCacheServer: string;
+  backendServer: string;
+}> = ({ children, zeroCacheServer, backendServer }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userID, setUserID] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Create auth client instance
+  const authClient = createAuthClient(backendServer);
 
   /**
    * Check authentication status on mount
@@ -53,15 +49,16 @@ export const AuthedZeroProvider: React.FC<{
     const checkAuth = async () => {
       try {
         setIsLoading(true);
-        const authenticated = await isAuthenticated();
-        
-        if (authenticated) {
-          const userId = await getZeroUserID();
-          setUserID(userId);
+        const response = await authClient.me();
+
+        // Check if the response indicates success and has user data
+        if (response.data?.success) {
+          // Create userID from the authenticated user data;
+          setUserID(response.data.staffId!);
           setIsLoggedIn(true);
         }
       } catch (err) {
-        console.error('Auth check failed:', err);
+        console.error("Auth check failed:", err);
         // Not authenticated or error - stay logged out
       } finally {
         setIsLoading(false);
@@ -69,7 +66,7 @@ export const AuthedZeroProvider: React.FC<{
     };
 
     checkAuth();
-  }, []);
+  }, [authClient]);
 
   /**
    * Staff PIN login
@@ -78,25 +75,29 @@ export const AuthedZeroProvider: React.FC<{
     try {
       setIsLoading(true);
       setError(null);
-      
-      await loginWithStaffPin(staffId, pin);
-      
-      // Get the userID from the server after successful login
-      const userId = await getZeroUserID();
-      setUserID(userId);
-      setIsLoggedIn(true);
-      
+
+      const response = await authClient.loginWithStaffPin(staffId, pin);
+
+      // Login successful, create userID and set logged in state
+      if (response?.success) {
+        setUserID(staffId);
+        setIsLoggedIn(true);
+      } else {
+        throw new Error("Login failed");
+      }
     } catch (err) {
       if (err instanceof AuthError) {
         if (err.statusCode === 429 && err.retryAfter) {
-          setError(`Too many attempts. Try again in ${err.retryAfter} seconds.`);
+          setError(
+            `Too many attempts. Try again in ${err.retryAfter} seconds.`
+          );
         } else {
           setError(err.message);
         }
       } else {
-        setError('Login failed. Please try again.');
+        setError("Login failed. Please try again.");
       }
-      console.error('Staff login failed:', err);
+      console.error("Staff login failed:", err);
     } finally {
       setIsLoading(false);
     }
@@ -109,25 +110,32 @@ export const AuthedZeroProvider: React.FC<{
     try {
       setIsLoading(true);
       setError(null);
-      
-      await loginWithAdminCredentials(email, password);
-      
-      // Get the userID from the server after successful login
-      const userId = await getZeroUserID();
-      setUserID(userId);
-      setIsLoggedIn(true);
-      
+
+      const response = await authClient.loginWithAdminCredentials(
+        email,
+        password
+      );
+
+      // Login successful, create userID and set logged in state
+      if (response?.success) {
+        setUserID(response.staffId);
+        setIsLoggedIn(true);
+      } else {
+        throw new Error("Login failed");
+      }
     } catch (err) {
       if (err instanceof AuthError) {
         if (err.statusCode === 429 && err.retryAfter) {
-          setError(`Too many attempts. Try again in ${err.retryAfter} seconds.`);
+          setError(
+            `Too many attempts. Try again in ${err.retryAfter} seconds.`
+          );
         } else {
           setError(err.message);
         }
       } else {
-        setError('Login failed. Please try again.');
+        setError("Login failed. Please try again.");
       }
-      console.error('Admin login failed:', err);
+      console.error("Admin login failed:", err);
     } finally {
       setIsLoading(false);
     }
@@ -139,17 +147,16 @@ export const AuthedZeroProvider: React.FC<{
   const handleLogout = async (dropDatabases: boolean = true) => {
     try {
       setIsLoading(true);
-      
+
       // Clear server-side session and optionally drop local databases
-      await logout(dropDatabases);
-      
+      await authClient.logout(dropDatabases);
+
       // Clear local state
       setIsLoggedIn(false);
       setUserID(null);
       setError(null);
-      
     } catch (err) {
-      console.error('Logout failed:', err);
+      console.error("Logout failed:", err);
       // Still clear local state even if server logout fails
       setIsLoggedIn(false);
       setUserID(null);
@@ -188,23 +195,14 @@ export const AuthedZeroProvider: React.FC<{
     );
   }
 
-  // If not logged in, provide auth context but no Zero provider
-  if (!isLoggedIn || !userID) {
-    return (
-      <AuthContext.Provider value={authContextValue}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
   // If logged in, wrap with both auth context and ZeroProvider
   return (
     <AuthContext.Provider value={authContextValue}>
       <ZeroProvider
-        userID={userID}
-        server={serverUrl}
+        userID={userID || "anon"}
+        server={zeroCacheServer}
         schema={schema}
-        auth={createZeroAuthFunction()}
+        auth={authClient.createZeroAuthFunction()}
       >
         {children}
       </ZeroProvider>
@@ -219,7 +217,7 @@ export const AuthedZeroProvider: React.FC<{
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthedZeroProvider');
+    throw new Error("useAuth must be used within an AuthedZeroProvider");
   }
   return context;
 };

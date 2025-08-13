@@ -11,6 +11,7 @@ import { schema, type Schema } from "./generated/schema";
 
 export * from "./generated/schema";
 export type { Schema } from "./generated/schema";
+
 /**
  * PERMISSIONS
  * - Public read for menu content and settings.

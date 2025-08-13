@@ -176,3 +176,5 @@ dist
 
 .adminjs
 .adminjs/*
+
+.react-router

@@ -1,8 +1,7 @@
 import { Zero } from "@rocicorp/zero";
-import { schema, type Schema } from "../schema";
+import { schema, type Schema } from "../../../schema";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useAuth } from "./AuthedZeroProvider";
-import LoginForm from "./LoginForm";
+import { useAuth } from "../AuthedZeroProvider";
 
 export default function App() {
   const { isLoggedIn, isLoading, error } = useAuth();

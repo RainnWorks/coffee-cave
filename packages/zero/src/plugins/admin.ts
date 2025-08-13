@@ -1,15 +1,17 @@
-// createAdminJS.ts
 import AdminJS from "adminjs";
-import AdminJSExpress from "@adminjs/express";
-import { Database, Resource } from "@adminjs/sequelize";
+import { buildAuthenticatedRouter } from "./admin/build-authenticated-router";
 import { Sequelize } from "sequelize";
-import { schema } from "./schema";
-import { allergenTableRelationships, categoryTableRelationships, menuItemTableRelationships } from "./generated/schema";
+import { allergenTableRelationships, categoryTableRelationships, menuItemTableRelationships, schema } from "../schema";
+import { Database, Resource } from "@adminjs/sequelize";
 
 AdminJS.registerAdapter({ Database, Resource });
 
-export function createAdminJS(sequelize: Sequelize) {
+export async function adminPlugin() {
   // Define models
+  const sequelize = new Sequelize(DMNO_CONFIG.ZERO_UPSTREAM_DB, {
+    dialect: "postgres",
+  });
+
   const RestaurantSettings = sequelize.define(
     schema.tables.restaurant_settings.name,
     {},
@@ -35,21 +37,24 @@ export function createAdminJS(sequelize: Sequelize) {
     through: schema.tables.menu_item_category.name,
     foreignKey:
       categoryTableRelationships.relationships.menuItems[0].destField[0],
-    otherKey: menuItemTableRelationships.relationships.categories[0].sourceField[0],
+    otherKey:
+      menuItemTableRelationships.relationships.categories[0].sourceField[0],
   });
 
   MenuItem.belongsToMany(Category, {
     through: schema.tables.menu_item_category.name,
     foreignKey:
       menuItemTableRelationships.relationships.categories[0].destField[0],
-    otherKey: categoryTableRelationships.relationships.menuItems[0].sourceField[0],
+    otherKey:
+      categoryTableRelationships.relationships.menuItems[0].sourceField[0],
   });
 
   Allergen.belongsToMany(MenuItem, {
     through: schema.tables.menu_item_allergen.name,
     foreignKey:
       menuItemTableRelationships.relationships.allergens[0].destField[0],
-    otherKey: allergenTableRelationships.relationships.menuItems[0].sourceField[0],
+    otherKey:
+      allergenTableRelationships.relationships.menuItems[0].sourceField[0],
   });
 
   // Create AdminJS instance
@@ -58,21 +63,9 @@ export function createAdminJS(sequelize: Sequelize) {
     rootPath: "/admin",
     branding: {
       companyName: "Coffee Cave",
-      withMadeWithLove: false
+      withMadeWithLove: false,
     },
   });
 
-  // Auth router
-  const router = AdminJSExpress.buildAuthenticatedRouter(admin, {
-    authenticate: async (email, password) => {
-      if (email === "admin@example.com" && password === "secret") {
-        return { email };
-      }
-      return null;
-    },
-    cookieName: "adminjs",
-    cookiePassword: "sessionsecret",
-  });
-
-  return { admin, router };
+  return await buildAuthenticatedRouter(admin);
 }
