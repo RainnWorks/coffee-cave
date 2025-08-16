@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { ZeroProvider } from "@rocicorp/zero/react";
-import { createAuthClient, AuthError } from "./auth";
+import { createAuthClient, AuthError } from "./lib/auth";
 import { schema } from "../../schema";
 
 /**
@@ -12,13 +19,17 @@ interface AuthContextType {
   isLoggedIn: boolean;
   userID: string | null;
   isLoading: boolean;
-  error: string | null;
 
   // Authentication methods
-  loginStaff: (staffId: string, pin: string) => Promise<void>;
-  loginAdmin: (email: string, password: string) => Promise<void>;
+  loginStaff: (
+    staffId: string,
+    pin: string
+  ) => Promise<{ success: true } | { success: false; error: string }>;
+  loginAdmin: (
+    email: string,
+    password: string
+  ) => Promise<{ success: true } | { success: false; error: string }>;
   logout: (dropDatabases?: boolean) => Promise<void>;
-  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,11 +47,14 @@ export const AuthedZeroProvider: React.FC<{
 }> = ({ children, zeroCacheServer, backendServer }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userID, setUserID] = useState<string | null>(null);
+  const [role, setRole] = useState<"admin" | "staff" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Create auth client instance
-  const authClient = createAuthClient(backendServer);
+  // Create auth client instance (memoized)
+  const authClient = useMemo(
+    () => createAuthClient(backendServer),
+    [backendServer]
+  );
 
   /**
    * Check authentication status on mount
@@ -55,7 +69,7 @@ export const AuthedZeroProvider: React.FC<{
         if (response.data?.success) {
           // Create userID from the authenticated user data;
           setUserID(response.data.staffId!);
-          setIsLoggedIn(true);
+          setIsLoggedIn(response.data.isLoggedIn);
         }
       } catch (err) {
         console.error("Auth check failed:", err);
@@ -69,130 +83,140 @@ export const AuthedZeroProvider: React.FC<{
   }, [authClient]);
 
   /**
-   * Staff PIN login
+   * Staff PIN login (memoized)
    */
-  const loginStaff = async (staffId: string, pin: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const loginStaff = useCallback(
+    async (staffId: string, pin: string) => {
+      try {
+        const response = await authClient.loginWithStaffPin(staffId, pin);
 
-      const response = await authClient.loginWithStaffPin(staffId, pin);
-
-      // Login successful, create userID and set logged in state
-      if (response?.success) {
-        setUserID(staffId);
-        setIsLoggedIn(true);
-      } else {
-        throw new Error("Login failed");
-      }
-    } catch (err) {
-      if (err instanceof AuthError) {
-        if (err.statusCode === 429 && err.retryAfter) {
-          setError(
-            `Too many attempts. Try again in ${err.retryAfter} seconds.`
-          );
+        // Login successful, create userID and set logged in state
+        if (response?.success) {
+          setUserID(staffId);
+          setIsLoggedIn(true);
+          setRole(response.role ?? null);
+          return { success: true } as const;
         } else {
-          setError(err.message);
+          throw new Error("Login failed");
         }
-      } else {
-        setError("Login failed. Please try again.");
-      }
-      console.error("Staff login failed:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * Admin email/password login
-   */
-  const loginAdmin = async (email: string, password: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await authClient.loginWithAdminCredentials(
-        email,
-        password
-      );
-
-      // Login successful, create userID and set logged in state
-      if (response?.success) {
-        setUserID(response.staffId);
-        setIsLoggedIn(true);
-      } else {
-        throw new Error("Login failed");
-      }
-    } catch (err) {
-      if (err instanceof AuthError) {
-        if (err.statusCode === 429 && err.retryAfter) {
-          setError(
-            `Too many attempts. Try again in ${err.retryAfter} seconds.`
-          );
+      } catch (err) {
+        if (err instanceof AuthError) {
+          if (err.statusCode === 429 && err.retryAfter) {
+            return {
+              success: false,
+              error: `Too many attempts. Try again in ${err.retryAfter} seconds.`,
+            };
+          } else {
+            return { success: false, error: err.message } as const;
+          }
         } else {
-          setError(err.message);
+          return {
+            success: false,
+            error: "Login failed. Please try again.",
+          } as const;
         }
-      } else {
-        setError("Login failed. Please try again.");
       }
-      console.error("Admin login failed:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [authClient]
+  );
 
   /**
-   * Logout and cleanup
+   * Admin email/password login (memoized)
    */
-  const handleLogout = async (dropDatabases: boolean = true) => {
-    try {
-      setIsLoading(true);
+  const loginAdmin = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const response = await authClient.loginWithAdminCredentials(
+          email,
+          password
+        );
 
-      // Clear server-side session and optionally drop local databases
-      await authClient.logout(dropDatabases);
-
-      // Clear local state
-      setIsLoggedIn(false);
-      setUserID(null);
-      setError(null);
-    } catch (err) {
-      console.error("Logout failed:", err);
-      // Still clear local state even if server logout fails
-      setIsLoggedIn(false);
-      setUserID(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        // Login successful, create userID and set logged in state
+        if (response?.success) {
+          setUserID(response.staffId);
+          setIsLoggedIn(true);
+          setRole(response.role);
+          return { success: true } as const;
+        } else {
+          return { success: false, error: "Login failed" } as const;
+        }
+      } catch (err) {
+        if (err instanceof AuthError) {
+          if (err.statusCode === 429 && err.retryAfter) {
+            return {
+              success: false,
+              error: `Too many attempts. Try again in ${err.retryAfter} seconds.`,
+            };
+          } else {
+            return { success: false, error: err.message } as const;
+          }
+        } else {
+          return {
+            success: false,
+            error: "Login failed. Please try again.",
+          } as const;
+        }
+      }
+    },
+    [authClient]
+  );
 
   /**
-   * Clear error state
+   * Logout and cleanup (memoized)
    */
-  const clearError = () => {
-    setError(null);
-  };
+  const handleLogout = useCallback(
+    async (dropDatabases: boolean = true) => {
+      try {
+        // Clear server-side session and optionally drop local databases
+        await authClient.logout(dropDatabases);
 
-  const authContextValue: AuthContextType = {
-    isLoggedIn,
-    userID,
-    isLoading,
-    error,
-    loginStaff,
-    loginAdmin,
-    logout: handleLogout,
-    clearError,
-  };
+        // Clear local state
+        setIsLoggedIn(false);
+        setUserID(null);
+      } catch (err) {
+        console.error("Logout failed:", err);
+        // Still clear local state even if server logout fails
+        setIsLoggedIn(false);
+        setUserID(null);
+      }
+    },
+    [authClient]
+  );
 
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return (
+  const authContextValue: AuthContextType = useMemo(
+    () => ({
+      isLoggedIn,
+      userID,
+      isLoading,
+      loginStaff,
+      loginAdmin,
+      logout: handleLogout,
+    }),
+    [isLoggedIn, userID, isLoading, loginStaff, loginAdmin, handleLogout]
+  );
+
+  // Memoized loading component
+  const loadingComponent = useMemo(
+    () => (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
-    );
+    ),
+    []
+  );
+
+  // Memoized Zero auth function
+  const zeroAuthFunction = useMemo(
+    () => authClient.createZeroAuthFunction(),
+    [authClient]
+  );
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return loadingComponent;
   }
 
   // If logged in, wrap with both auth context and ZeroProvider
@@ -202,7 +226,7 @@ export const AuthedZeroProvider: React.FC<{
         userID={userID || "anon"}
         server={zeroCacheServer}
         schema={schema}
-        auth={authClient.createZeroAuthFunction()}
+        auth={zeroAuthFunction}
       >
         {children}
       </ZeroProvider>

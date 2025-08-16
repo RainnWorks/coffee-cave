@@ -149,6 +149,7 @@ export const guardedRoutes = new Elysia()
 
       const newPayloadBase = {
         sub: authPayload.sub,
+        role: authPayload.role,
         iss: "rowm-auth",
         aud: "zero-cache",
         exp: "5m",
@@ -182,31 +183,25 @@ export const unguardedRoutes = new Elysia()
       /* ----- staff-pin login ------------------------------- */
       .post(
         "/staff-pin",
-        async ({
-          body,
-          cookie,
-          jwtRefresh,
-          jwtAccess,
-          status,
-          server,
-          request,
-        }) => {
+        async ({ body, cookie, jwtRefresh, jwtAccess }) => {
           const { staffId, pin } = body;
 
           const staff = await db.staff.findUnique({
             where: { id: staffId },
-            include: { adminAccount: true },
+            include: { adminAccount: true, pinLogin: true },
           });
 
-          if (
-            !staff ||
-            staff.disabledAt ||
-            !verifyWithSalt(pin, staff.pinSalt, staff.pinHash)
-          )
-            return status(401, {
-              success: false,
-              message: "Invalid credentials",
-            });
+          if (!staff || staff.disabledAt)
+            return { success: false, message: "Invalid credentials" };
+
+          const verificationResult = await verifyWithSalt(
+            pin,
+            staff.pinLogin.pinSalt,
+            staff.pinLogin.pinHash
+          );
+          if (!verificationResult) {
+            return { success: false, message: "Invalid credentials" };
+          }
 
           const basePayload = {
             sub: staff.id,
@@ -216,6 +211,7 @@ export const unguardedRoutes = new Elysia()
 
           const refreshToken = await jwtRefresh.sign(basePayload);
           const accessToken = await jwtAccess.sign(basePayload);
+          console.log(accessToken);
 
           cookie.refresh_token.set({
             value: refreshToken,
@@ -227,9 +223,6 @@ export const unguardedRoutes = new Elysia()
           });
           setAccessCookie(cookie, accessToken);
 
-          console.log(
-            `Staff login ${staff.id} from ${server?.requestIP(request)}`
-          );
           return {
             success: true,
             firstName: staff.firstName,
@@ -241,7 +234,7 @@ export const unguardedRoutes = new Elysia()
         {
           body: t.Object({
             staffId: t.String(),
-            pin: t.String({ pattern: "^\\d{6}$" }),
+            pin: t.String(),
           }),
         }
       )
@@ -262,14 +255,18 @@ export const unguardedRoutes = new Elysia()
 
           const admin = await db.admin.findFirst({
             where: { email: email.toLowerCase() },
-            include: { staff: true },
+            include: { staff: true, passwordLogin: true },
           });
 
           if (
             !admin ||
             admin.disabledAt ||
             admin.staff.disabledAt ||
-            !verifyWithSalt(password, admin.passwordSalt, admin.passwordHash)
+            !verifyWithSalt(
+              password,
+              admin.passwordLogin.passwordSalt,
+              admin.passwordLogin.passwordHash
+            )
           )
             return status(401, {
               success: false,
@@ -318,7 +315,7 @@ export const unguardedRoutes = new Elysia()
       )
   )
 
-  .get("/me", async ({ authPayload }) => {
+  .get("/me", async ({ authPayload, cookie }) => {
     if (!authPayload) {
       return {
         success: true as const,
@@ -330,8 +327,15 @@ export const unguardedRoutes = new Elysia()
       where: { id: authPayload.sub },
       select: { firstName: true, lastName: true },
     });
-    if (!staff) return { success: false, message: "Staff not found" } as const;
-
+    if (!staff) {
+      cookie.refresh_token.remove();
+      cookie.access_token.remove();
+      return {
+        success: false,
+        isLoggedIn: false,
+        message: "Staff not found",
+      } as const;
+    }
     let email: string | null = null;
     if (authPayload.role === "admin" && authPayload.adminId) {
       const admin = await db.admin.findUnique({

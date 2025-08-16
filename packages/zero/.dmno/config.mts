@@ -1,4 +1,4 @@
-import { DmnoBaseTypes, defineDmnoService } from "dmno";
+import { DmnoBaseTypes, defineDmnoService,  } from "dmno";
 
 export default defineDmnoService({
   // no `name` specified - will inherit from package.json
@@ -35,6 +35,7 @@ export default defineDmnoService({
       sensitive: true,
       required: true,
       description: 'Secret for signing Zero Access JWTs (short-lived tokens)',
+      value: () => DMNO_CONFIG.ACCESS_JWT_SECRET
     },
     
     // Auth settings

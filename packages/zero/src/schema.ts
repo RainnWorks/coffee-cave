@@ -6,6 +6,7 @@ import {
   definePermissions,
   ANYONE_CAN,
   type ExpressionBuilder,
+  NOBODY_CAN,
 } from "@rocicorp/zero";
 import { schema, type Schema } from "./generated/schema";
 
@@ -66,10 +67,34 @@ export const permissions = definePermissions<AuthData, Schema>(schema, () => {
       },
     },
 
+    password_login: {
+      row: {
+        select: NOBODY_CAN,
+        delete: NOBODY_CAN,
+        insert: [allowIfAdmin],
+        update: {
+          preMutation: [allowIfAdmin],
+          postMutation: ANYONE_CAN,
+        },
+      },
+    },
+
+    pin_login: {
+      row: {
+        select: NOBODY_CAN,
+        delete: NOBODY_CAN,
+        insert: [allowIfAdmin],
+        update: {
+          preMutation: [allowIfAdmin],
+          postMutation: ANYONE_CAN,
+        },
+      },
+    },
+
     // Staff directory (read for staff/admin only)
     staff: {
       row: {
-        select: [allowIfStaffOrAdmin],
+        select: ANYONE_CAN,
         insert: [allowIfAdmin],
         update: {
           preMutation: [allowIfAdmin],

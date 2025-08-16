@@ -27,15 +27,30 @@ export const restaurantSettingsTable = table("restaurant_settings")
   })
   .primaryKey("id");
 
+export const pinLoginTable = table("pin_login")
+  .columns({
+    id: string(),
+    pinHash: string(),
+    pinSalt: string(),
+  })
+  .primaryKey("id");
+
 export const staffTable = table("staff")
   .columns({
     id: string(),
     firstName: string(),
     lastName: string(),
-    pinHash: string(),
-    pinSalt: string(),
+    pinLoginId: string(),
     credVersion: number(),
     disabledAt: number().optional(),
+  })
+  .primaryKey("id");
+
+export const passwordLoginTable = table("password_login")
+  .columns({
+    id: string(),
+    passwordHash: string(),
+    passwordSalt: string(),
   })
   .primaryKey("id");
 
@@ -43,8 +58,7 @@ export const adminTable = table("admin")
   .columns({
     id: string(),
     email: string().optional(),
-    passwordHash: string(),
-    passwordSalt: string(),
+    passwordLoginId: string(),
     credVersion: number(),
     disabledAt: number().optional(),
     staffId: string(),
@@ -58,8 +72,10 @@ export const restaurantTableTable = table("restaurant_table")
     seats: number(),
     closed: boolean().optional(),
     closedAt: number().optional(),
-    createdAt: number().optional(),
+    createdAt: number(),
     notes: string().optional(),
+    createdById: string(),
+    closedById: string().optional(),
   })
   .primaryKey("id");
 
@@ -105,7 +121,7 @@ export const menuItemAllergenTable = table("menu_item_allergen")
 export const tabTable = table("tab")
   .columns({
     id: string(),
-    createdAt: number().optional(),
+    createdAt: number(),
     locked: boolean().optional(),
     closed: boolean().optional(),
     closedAt: number().optional(),
@@ -121,7 +137,7 @@ export const tabItemTable = table("tab_item")
     notes: string().optional(),
     nameOverride: string().optional(),
     priceOverride: number().optional(),
-    createdAt: number().optional(),
+    createdAt: number(),
     tabID: string(),
     menuItemID: string().optional(),
   })
@@ -141,7 +157,7 @@ export const paymentTable = table("payment")
     id: string(),
     amount: number(),
     notes: string().optional(),
-    createdAt: number().optional(),
+    createdAt: number(),
     tableID: string().optional(),
   })
   .primaryKey("id");
@@ -155,9 +171,25 @@ export const paymentTabItemPaidTable = table("payment_tab_item_paid")
 
 // Define relationships
 
+export const pinLoginTableRelationships = relationships(
+  pinLoginTable,
+  ({ one }) => ({
+    Staff: one({
+      sourceField: ["id"],
+      destField: ["pinLoginId"],
+      destSchema: staffTable,
+    }),
+  }),
+);
+
 export const staffTableRelationships = relationships(
   staffTable,
   ({ one, many }) => ({
+    pinLogin: one({
+      sourceField: ["pinLoginId"],
+      destField: ["id"],
+      destSchema: pinLoginTable,
+    }),
     createdMenuItems: many({
       sourceField: ["id"],
       destField: ["createdByID"],
@@ -178,10 +210,36 @@ export const staffTableRelationships = relationships(
       destField: ["staffId"],
       destSchema: adminTable,
     }),
+    closedRestaurantTables: many({
+      sourceField: ["id"],
+      destField: ["closedById"],
+      destSchema: restaurantTableTable,
+    }),
+    createdRestaurantTables: many({
+      sourceField: ["id"],
+      destField: ["createdById"],
+      destSchema: restaurantTableTable,
+    }),
+  }),
+);
+
+export const passwordLoginTableRelationships = relationships(
+  passwordLoginTable,
+  ({ one }) => ({
+    Admin: one({
+      sourceField: ["id"],
+      destField: ["passwordLoginId"],
+      destSchema: adminTable,
+    }),
   }),
 );
 
 export const adminTableRelationships = relationships(adminTable, ({ one }) => ({
+  passwordLogin: one({
+    sourceField: ["passwordLoginId"],
+    destField: ["id"],
+    destSchema: passwordLoginTable,
+  }),
   staff: one({
     sourceField: ["staffId"],
     destField: ["id"],
@@ -191,7 +249,17 @@ export const adminTableRelationships = relationships(adminTable, ({ one }) => ({
 
 export const restaurantTableTableRelationships = relationships(
   restaurantTableTable,
-  ({ many }) => ({
+  ({ one, many }) => ({
+    createdBy: one({
+      sourceField: ["createdById"],
+      destField: ["id"],
+      destSchema: staffTable,
+    }),
+    closedBy: one({
+      sourceField: ["closedById"],
+      destField: ["id"],
+      destSchema: staffTable,
+    }),
     tabs: many({
       sourceField: ["id"],
       destField: ["tableID"],
@@ -395,7 +463,9 @@ export const paymentTabItemPaidTableRelationships = relationships(
 export const schema = createSchema({
   tables: [
     restaurantSettingsTable,
+    pinLoginTable,
     staffTable,
+    passwordLoginTable,
     adminTable,
     restaurantTableTable,
     categoryTable,
@@ -410,7 +480,9 @@ export const schema = createSchema({
     paymentTabItemPaidTable,
   ],
   relationships: [
+    pinLoginTableRelationships,
     staffTableRelationships,
+    passwordLoginTableRelationships,
     adminTableRelationships,
     restaurantTableTableRelationships,
     categoryTableRelationships,
@@ -429,7 +501,9 @@ export const schema = createSchema({
 // Define types
 export type Schema = typeof schema;
 export type RestaurantSettings = Row<typeof schema.tables.restaurant_settings>;
+export type PinLogin = Row<typeof schema.tables.pin_login>;
 export type Staff = Row<typeof schema.tables.staff>;
+export type PasswordLogin = Row<typeof schema.tables.password_login>;
 export type Admin = Row<typeof schema.tables.admin>;
 export type RestaurantTable = Row<typeof schema.tables.restaurant_table>;
 export type Category = Row<typeof schema.tables.category>;
