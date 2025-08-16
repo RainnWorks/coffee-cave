@@ -6,10 +6,9 @@ import { verifyWithSalt } from "../utils/auth";
 /* ────────────────────────────────────────────────────────────────
  *  Constants
  * ───────────────────────────────────────────────────────────── */
-const REFRESH_TTL_DAYS = DMNO_CONFIG.REFRESH_TTL_DAYS ?? 30;
-const REFRESH_EXP = `${REFRESH_TTL_DAYS}d`; // 30-day session
+const REFRESH_EXP = `30d`; // 30-day session
 const ACCESS_EXP = "10m"; // 10-minute bearer
-const REFRESH_MAX_AGE_S = REFRESH_TTL_DAYS * 24 * 60 * 60; // seconds
+const REFRESH_MAX_AGE_S = 30 * 24 * 60 * 60; // seconds
 const ACCESS_MAX_AGE_S = 10 * 60; // 600 s
 
 export type AuthPayload =
@@ -40,20 +39,78 @@ export type AuthPayload =
 export type NullableAuth = { authPayload: AuthPayload | null };
 export type ScopedAuth = { auth: AuthPayload };
 /* ────────────────────────────────────────────────────────────────
- *  Helper: set access token cookie
+ *  Token & Cookie Utilities
  * ───────────────────────────────────────────────────────────── */
-const setAccessCookie = (
+
+/** Create base auth payload for staff */
+const createStaffPayload = (staff: {
+  id: string;
+  credVersion: number;
+}): Extract<AuthPayload, { role: "staff" }> => ({
+  sub: staff.id,
+  role: "staff",
+  credVersion: staff.credVersion,
+});
+
+/** Create base auth payload for admin */
+const createAdminPayload = (
+  staff: { id: string; credVersion: number },
+  admin: { id: string; credVersion: number }
+): Extract<AuthPayload, { role: "admin" }> => ({
+  sub: staff.id,
+  role: "admin",
+  adminId: admin.id,
+  credVersion: Math.max(admin.credVersion, staff.credVersion),
+});
+
+/** Mint access and refresh tokens, set cookies */
+const mintTokensAndSetCookies = async (
+  payload: AuthPayload,
+  context: {
+    jwtAccess: { sign: (payload: any) => Promise<string> };
+    jwtRefresh: { sign: (payload: any) => Promise<string> };
+    cookie: InferContext<Elysia>["cookie"];
+  }
+): Promise<{ accessToken: string; refreshToken: string }> => {
+  const { jwtAccess, jwtRefresh, cookie } = context;
+  const accessToken = await jwtAccess.sign(payload);
+  const refreshToken = await jwtRefresh.sign(payload);
+
+  setAccessTokenCookie(cookie, accessToken);
+  setRefreshTokenCookie(cookie, refreshToken);
+
+  return { accessToken, refreshToken };
+};
+
+/** Set only access token cookie (for refresh scenarios) */
+const setAccessTokenCookie = (
   cookie: InferContext<Elysia>["cookie"],
   token: string
-) =>
+): void => {
   cookie.access_token.set({
     value: token,
     maxAge: ACCESS_MAX_AGE_S,
-    httpOnly: false, // SPA may read & send via header
-    sameSite: "lax",
+    httpOnly: true,
+    sameSite: "strict",
     path: "/",
     secure: process.env.NODE_ENV === "production",
   });
+};
+
+/** Set refresh token cookie with custom httpOnly setting */
+const setRefreshTokenCookie = (
+  cookie: InferContext<Elysia>["cookie"],
+  token: string
+): void => {
+  cookie.refresh_token.set({
+    value: token,
+    maxAge: REFRESH_MAX_AGE_S,
+    httpOnly: true,
+    sameSite: "strict",
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+  });
+};
 
 export const authedPlugin = new Elysia()
   /* ▼ JWT instances ----------------------------------------- */
@@ -90,15 +147,16 @@ export const authedPlugin = new Elysia()
         }
       }
 
-      const cookieToken = cookie.access_token?.value;
+      const accessToken = cookie.access_token?.value;
 
       // ② Access-token cookie
-      if (!authPayload && cookieToken) {
+      if (!authPayload && accessToken) {
         const validatedCookieToken = await jwtAccess
-          .verify(cookieToken)
+          .verify(accessToken)
           .catch(() => null);
         if (validatedCookieToken) {
           authPayload = validatedCookieToken as AuthPayload;
+          newAccessToken = accessToken;
         }
       }
 
@@ -108,14 +166,18 @@ export const authedPlugin = new Elysia()
       if (!authPayload && refreshToken) {
         const validatedRefreshToken = await jwtRefresh
           .verify(refreshToken)
-          .catch(() => null);
+          .catch((e) => {
+            return false as const;
+          });
         if (validatedRefreshToken) {
           // rotate refresh TTL + issue fresh access
-          cookie.refresh_token.value = await jwtRefresh.sign(
-            validatedRefreshToken
-          );
+          const newRefresh = await jwtRefresh.sign(validatedRefreshToken);
+          setRefreshTokenCookie(cookie, newRefresh);
+
+          // Take the refresh tokens payload, and issue a new access token
           const newAccess = await jwtAccess.sign(validatedRefreshToken);
-          setAccessCookie(cookie, newAccess);
+          setAccessTokenCookie(cookie, newAccess);
+
           authPayload = validatedRefreshToken as AuthPayload;
           newAccessToken = newAccess;
         }
@@ -136,41 +198,16 @@ export const guardedRoutes = new Elysia()
     return { authPayload } as const;
   })
   /* ---------- zero-token: re-uses derive #1 ----------------- */
-  .post(
-    "/zero-token",
-    async ({ cookie, jwtRefresh, jwtAccess, authPayload, status }) => {
-      if (!authPayload)
-        return status(401, { success: false, message: "Invalid session" });
+  .post("/zero-token", async ({ authPayload, newAccessToken, status }) => {
+    if (!authPayload)
+      return status(401, { success: false, message: "Invalid session" });
 
-      // rotate refresh & fresh access
-      cookie.refresh_token.value = await jwtRefresh.sign(authPayload);
-      const newAccess = await jwtAccess.sign(authPayload);
-      setAccessCookie(cookie, newAccess);
-
-      const newPayloadBase = {
-        sub: authPayload.sub,
-        role: authPayload.role,
-        iss: "rowm-auth",
-        aud: "zero-cache",
-        exp: "5m",
-      };
-
-      const zeroToken = await jwtAccess.sign(
-        authPayload.role === "admin"
-          ? {
-              ...newPayloadBase,
-              adminId: authPayload.adminId,
-            }
-          : newPayloadBase
-      );
-
-      return {
-        success: true,
-        token: zeroToken,
-        subject: authPayload.sub,
-      };
-    }
-  );
+    return {
+      success: true,
+      token: newAccessToken,
+      subject: authPayload.sub,
+    };
+  });
 
 /* ────────────────────────────────────────────────────────────────
  *  Auth plugin (2-phase derive)
@@ -203,25 +240,11 @@ export const unguardedRoutes = new Elysia()
             return { success: false, message: "Invalid credentials" };
           }
 
-          const basePayload = {
-            sub: staff.id,
-            role: staff.adminAccount ? ("admin" as const) : ("staff" as const),
-            credVersion: staff.credVersion,
-          } as const;
-
-          const refreshToken = await jwtRefresh.sign(basePayload);
-          const accessToken = await jwtAccess.sign(basePayload);
-          console.log(accessToken);
-
-          cookie.refresh_token.set({
-            value: refreshToken,
-            maxAge: REFRESH_MAX_AGE_S,
-            httpOnly: true,
-            sameSite: "strict",
-            path: "/",
-            secure: process.env.NODE_ENV === "production",
-          });
-          setAccessCookie(cookie, accessToken);
+          const basePayload = createStaffPayload(staff);
+          const { accessToken, refreshToken } = await mintTokensAndSetCookies(
+            basePayload,
+            { jwtAccess, jwtRefresh, cookie }
+          );
 
           return {
             success: true,
@@ -273,25 +296,12 @@ export const unguardedRoutes = new Elysia()
               message: "Invalid credentials",
             });
 
-          const basePayload = {
-            sub: admin.staff.id,
-            role: "admin" as const,
-            adminId: admin.id,
-            credVersion: Math.max(admin.credVersion, admin.staff.credVersion),
-          } as const;
-
-          const refreshToken = await jwtRefresh.sign(basePayload);
-          const accessToken = await jwtAccess.sign(basePayload);
-
-          cookie.refresh_token.set({
-            value: refreshToken,
-            maxAge: REFRESH_MAX_AGE_S,
-            httpOnly: true,
-            sameSite: "strict",
-            path: "/",
-            secure: process.env.NODE_ENV === "production",
+          const basePayload = createAdminPayload(admin.staff, admin);
+          await mintTokensAndSetCookies(basePayload, {
+            jwtAccess,
+            jwtRefresh,
+            cookie,
           });
-          setAccessCookie(cookie, accessToken);
 
           console.log(
             `Admin login ${admin.id} from ${server?.requestIP(request)}`

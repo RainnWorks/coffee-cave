@@ -1,21 +1,25 @@
 "use client";
 
-import { generateItemId, GroupedItem, groupItems } from "@/lib/basket";
-import { Category, MenuItem } from "@/lib/manifest/types";
+import {
+  generateItemId,
+  type GroupedItem,
+  groupItems,
+} from "../../../../../../../lib/basket";
 import { DateTime } from "luxon";
 import React, {
   createContext,
   useContext,
   useState,
   useCallback,
-  ReactNode,
+  type ReactNode,
   useMemo,
 } from "react";
+import type { Category, MenuItem } from "../../../../../../../../../schema";
 
 // Type for our OrderItem that will be used in the context
 
 export type MenuDerivedItem = {
-  menuItemId: number;
+  menuItemId: string;
   nameOverride?: undefined;
   priceOverride?: number;
 };
@@ -44,7 +48,7 @@ export type OrderItemId = string;
 export type OrderItem = {
   category?: Category;
   item: MenuDerivedItem | CustomItem;
-  allergenIds: number[];
+  allergenIds: string[];
   notes?: string;
 };
 
@@ -62,8 +66,8 @@ interface BasketContextState {
   addItem: (orderItem: OrderItem) => void;
   removeItem: (keyOrItem: string | OrderItem) => void;
   clearItems: () => void;
-  toggleItemAllergen: (itemIndex: number, allergenId: number) => void;
-  setItemAllergenIds: (itemIndex: number, allergenIds: number[]) => void;
+  toggleItemAllergen: (itemIndex: number, allergenId: string) => void;
+  setItemAllergenIds: (itemIndex: number, allergenIds: string[]) => void;
   setItemNotes: (itemIndex: number, notes: string) => void;
   updateItem: (itemIndex: number, item: BasketItem) => void;
 }
@@ -153,7 +157,7 @@ export const BasketProvider: React.FC<BasketProviderProps> = ({ children }) => {
   );
 
   const toggleItemAllergen = useCallback(
-    (itemIndex: number, allergenId: number) => {
+    (itemIndex: number, allergenId: string) => {
       const item = basketItems[itemIndex];
       if (!item) return;
 
@@ -169,7 +173,7 @@ export const BasketProvider: React.FC<BasketProviderProps> = ({ children }) => {
   );
 
   const setItemAllergenIds = useCallback(
-    (itemIndex: number, allergenIds: number[]) => {
+    (itemIndex: number, allergenIds: string[]) => {
       setBasketItems((prevItems) =>
         updateItem(itemIndex, { ...prevItems[itemIndex], allergenIds })(
           prevItems

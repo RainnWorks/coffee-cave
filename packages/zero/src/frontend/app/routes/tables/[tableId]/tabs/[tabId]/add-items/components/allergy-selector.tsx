@@ -1,11 +1,11 @@
-import { Badge } from "@/components/ui/badge";
-import { Allergen } from "@/lib/manifest/types";
-import { cn } from "@/lib/utils";
+import { Badge } from "@frontend/components/ui/badge";
+import type { Allergen } from "../hook";
+import { cn } from "@frontend/lib/utils";
 
 export interface AllergenSelectorProps extends React.ComponentProps<"div"> {
-  selectedAllergenIds: number[];
+  selectedAllergenIds: string[];
   allergens: Allergen[];
-  onToggleAllergen: (allergenId: number) => void;
+  onToggleAllergen: (allergenId: string) => void;
 }
 
 export const AllergenSelector = ({

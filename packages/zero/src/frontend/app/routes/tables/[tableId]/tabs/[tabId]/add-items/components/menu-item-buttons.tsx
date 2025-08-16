@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@frontend/components/ui/button";
 import { Minus, Plus } from "lucide-react";
-import { OrderItem, useBasket } from "../contexts/basket";
-import { Category, MenuItem } from "@/lib/manifest/types";
+import { type OrderItem, useBasket } from "../contexts/basket";
+import type { Category, MenuItem } from "../hook";
 
 export interface AddMenuItemButtonProps {
   category: Category;

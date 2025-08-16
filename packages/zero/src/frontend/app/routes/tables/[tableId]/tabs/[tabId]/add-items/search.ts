@@ -9,6 +9,6 @@ export const urlKeys = {
 };
 
 export const searchParams = {
-  categoryId: parseAsInteger,
+  categoryId: parseAsString,
   searchTerm: parseAsString,
 };

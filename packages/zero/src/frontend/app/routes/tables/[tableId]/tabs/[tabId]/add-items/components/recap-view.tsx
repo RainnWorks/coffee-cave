@@ -1,24 +1,32 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@frontend/components/ui/button";
+import { cn } from "@frontend/lib/utils";
 import { ArrowLeft, AlertTriangle, CheckCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Badge } from "@frontend/components/ui/badge";
+import { Separator } from "@frontend/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { getItemPrice, GroupedBasketItem, useBasket } from "../contexts/basket";
-import { MenuItem } from "@/lib/manifest/types";
-import { Allergen } from "@/lib/manifest/types";
-import { ReconciledTable } from "@/lib/manifest/table-reconciler";
-import { useCurrencyFormatter } from "@/contexts/restaurant-config";
-import { Category } from "@/lib/manifest/types";
-import { Page, PageHeader, PageTitle, PageFooter } from "@/components/ui/page";
+} from "@frontend/components/ui/tooltip";
+import {
+  type BasketItem,
+  getItemPrice,
+  type GroupedBasketItem,
+  useBasket,
+} from "../contexts/basket";
+import { useCurrencyFormatter } from "@frontend/contexts/restaurant-config";
+import {
+  Page,
+  PageHeader,
+  PageTitle,
+  PageFooter,
+} from "@frontend/components/ui/page";
 import { useState } from "react";
+import type { Category, MenuItem, Allergen } from "../hook";
+import type { ReconciledTable } from "@/frontend/app/lib/table-reconciler";
 
 // Component for the order recap page
 export function RecapView({
@@ -29,7 +37,7 @@ export function RecapView({
   allMenuItems,
   allergens,
 }: {
-  onSubmit: () => Promise<void>;
+  onSubmit: (basketItems: BasketItem[]) => Promise<void>;
   onClickBack: () => void;
   table: ReconciledTable;
   categories: Category[];
@@ -38,10 +46,12 @@ export function RecapView({
 }) {
   const [isLoading, setIsLoading] = useState(false);
 
+  const { items: basketItems, list, clearItems } = useBasket();
   const onClickSubmit = () => {
     setIsLoading(true);
     if (isLoading) return;
-    onSubmit()
+    onSubmit(list)
+      .then(clearItems)
       .catch((error) => {
         console.error("Error submitting order:", error);
       })
@@ -51,21 +61,31 @@ export function RecapView({
   };
 
   const formatCurrency = useCurrencyFormatter();
-  const { items: basketItems } = useBasket();
 
   const itemsByCategory = Object.values(
-    basketItems.reduce((acc, item) => {
-      const categoryId = item.category?.id ?? "custom";
-      return {
-        ...acc,
-        [categoryId]: {
-          id: categoryId,
-          category: categories.find((cat) => cat.id === categoryId),
-          items: [...(acc[categoryId]?.items || []), item],
-          totalCount: (acc[categoryId]?.totalCount || 0) + item.count,
-        },
-      };
-    }, {} as Record<number | "custom", { id: string | number; category: Category | undefined; items: GroupedBasketItem[]; totalCount: number }>)
+    basketItems.reduce(
+      (acc, item) => {
+        const categoryId = item.category?.id ?? "custom";
+        return {
+          ...acc,
+          [categoryId]: {
+            id: categoryId,
+            category: categories.find((cat) => cat.id === categoryId),
+            items: [...(acc[categoryId]?.items || []), item],
+            totalCount: (acc[categoryId]?.totalCount || 0) + item.count,
+          },
+        };
+      },
+      {} as Record<
+        string | "custom",
+        {
+          id: string | number;
+          category: Category | undefined;
+          items: GroupedBasketItem[];
+          totalCount: number;
+        }
+      >
+    )
   );
   // Calculate total
   const total = basketItems.reduce((sum, item) => {

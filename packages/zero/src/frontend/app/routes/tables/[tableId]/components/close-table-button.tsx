@@ -7,8 +7,8 @@ import {
   TooltipTrigger,
 } from "../../../../components/ui/tooltip";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTypedZero } from "../../../../lib/zero";
+import { useLocation } from "wouter";
 
 export const CloseTableButton = ({
   tableId,
@@ -18,7 +18,7 @@ export const CloseTableButton = ({
   locked: boolean;
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [, setLocation] = useLocation();
 
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -32,7 +32,7 @@ export const CloseTableButton = ({
         closed: true,
       });
 
-      router.push(`/tables`);
+      setLocation(`/tables`);
     } finally {
       setIsLoading(false);
     }

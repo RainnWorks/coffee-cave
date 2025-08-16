@@ -31,13 +31,10 @@ const allowIfAdmin = (
   auth: AuthData,
   { cmpLit }: ExpressionBuilder<Schema, any>
 ) => cmpLit(auth.role ?? "anon", "=", "admin");
-
-const allowIfStaffOrAdmin = (
+const allowIfStaff = (
   auth: AuthData,
   { cmpLit }: ExpressionBuilder<Schema, any>
-) =>
-  cmpLit(auth.role ?? "anon", "=", "staff") ||
-  cmpLit(auth.role ?? "anon", "=", "admin");
+) => cmpLit(auth.role ?? "anon", "=", "staff");
 
 export const permissions = definePermissions<AuthData, Schema>(schema, () => {
   return {
@@ -107,13 +104,13 @@ export const permissions = definePermissions<AuthData, Schema>(schema, () => {
     // Tables (ops staff/admin)
     restaurant_table: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
         update: {
-          preMutation: [allowIfStaffOrAdmin],
+          preMutation: [allowIfAdmin, allowIfStaff],
           postMutation: ANYONE_CAN,
         },
-        delete: [allowIfStaffOrAdmin],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
@@ -121,12 +118,12 @@ export const permissions = definePermissions<AuthData, Schema>(schema, () => {
     category: {
       row: {
         select: ANYONE_CAN,
-        insert: [allowIfStaffOrAdmin],
+        insert: [allowIfAdmin, allowIfStaff],
         update: {
-          preMutation: [allowIfStaffOrAdmin],
+          preMutation: [allowIfAdmin, allowIfStaff],
           postMutation: ANYONE_CAN,
         },
-        delete: [allowIfStaffOrAdmin],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
@@ -135,88 +132,88 @@ export const permissions = definePermissions<AuthData, Schema>(schema, () => {
     allergen: {
       row: {
         select: ANYONE_CAN,
-        insert: [allowIfStaffOrAdmin],
+        insert: [allowIfAdmin, allowIfStaff],
         update: {
-          preMutation: [allowIfStaffOrAdmin],
+          preMutation: [allowIfAdmin, allowIfStaff],
           postMutation: ANYONE_CAN,
         },
-        delete: [allowIfStaffOrAdmin],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     menu_item: {
       row: {
         select: ANYONE_CAN,
-        insert: [allowIfStaffOrAdmin],
+        insert: [allowIfAdmin, allowIfStaff],
         update: {
-          preMutation: [allowIfStaffOrAdmin],
+          preMutation: [allowIfAdmin, allowIfStaff],
           postMutation: ANYONE_CAN,
         },
-        delete: [allowIfStaffOrAdmin],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     menu_item_category: {
       row: {
         select: ANYONE_CAN,
-        insert: [allowIfStaffOrAdmin],
-        delete: [allowIfStaffOrAdmin],
+        insert: [allowIfAdmin, allowIfStaff],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     menu_item_allergen: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
-        delete: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     tab: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
         update: {
-          preMutation: [allowIfStaffOrAdmin],
+          preMutation: [allowIfAdmin, allowIfStaff],
           postMutation: ANYONE_CAN,
         },
-        delete: [allowIfStaffOrAdmin],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     tab_item: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
         update: {
-          preMutation: [allowIfStaffOrAdmin],
+          preMutation: [allowIfAdmin, allowIfStaff],
           postMutation: ANYONE_CAN,
         },
-        delete: [allowIfStaffOrAdmin],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     tab_item_allergy_restriction: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
-        delete: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     payment: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
-        delete: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
 
     payment_tab_item_paid: {
       row: {
-        select: [allowIfStaffOrAdmin],
-        insert: [allowIfStaffOrAdmin],
-        delete: [allowIfStaffOrAdmin],
+        select: [allowIfAdmin, allowIfStaff],
+        insert: [allowIfAdmin, allowIfStaff],
+        delete: [allowIfAdmin, allowIfStaff],
       },
     },
   };

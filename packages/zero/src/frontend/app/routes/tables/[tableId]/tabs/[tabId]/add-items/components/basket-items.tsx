@@ -1,28 +1,28 @@
 "use client";
 
-import { useCurrencyFormatter } from "@/contexts/restaurant-config";
+import { useCurrencyFormatter } from "@frontend/contexts/restaurant-config";
 import {
-  CustomItem,
+  type CustomItem,
   getItemPrice,
-  GroupedBasketItem,
-  MenuDerivedItem,
+  type GroupedBasketItem,
+  type MenuDerivedItem,
   useBasket,
 } from "../contexts/basket";
 import { AlertCircle, Edit2, Minus, Plus, Trash2 } from "lucide-react";
-import { Allergen, MenuItem } from "@/lib/manifest/types";
-import { Button } from "@/components/ui/button";
+import type { Allergen, MenuItem } from "../hook";
+import { Button } from "@frontend/components/ui/button";
 import { useState } from "react";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@frontend/components/ui/textarea";
+import { cn } from "@frontend/lib/utils";
+import { Badge } from "@frontend/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { DynamicIcon, IconName } from "lucide-react/dynamic";
+} from "@frontend/components/ui/dialog";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 
 export interface BasketItemsProps extends React.HTMLAttributes<HTMLDivElement> {
   menuItems: MenuItem[];
@@ -52,7 +52,7 @@ export const BasketItems = ({
   const [editingItem, setEditingItem] = useState<{
     itemId: string;
     item: GroupedBasketItem;
-    allergenIds: number[];
+    allergenIds: string[];
     notes: string;
     quantity: number;
     maxQuantity: number;
@@ -92,7 +92,7 @@ export const BasketItems = ({
   };
 
   // Toggle allergen in edit dialog
-  const toggleAllergen = (allergenId: number) => {
+  const toggleAllergen = (allergenId: string) => {
     setEditingItem((prev) => {
       return !prev
         ? null

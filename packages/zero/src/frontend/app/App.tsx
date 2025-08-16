@@ -6,15 +6,17 @@ import { Route, Switch } from "wouter";
 import Index from "./routes";
 import TablesPage from "./routes/tables/page";
 import "./index.css";
-import { NuqsAdapter } from "nuqs/adapters/react";
 import PosLogin from "./routes/login/page";
 import { StaffLogin } from "./routes/login/[id]/page";
 import { TablesLayout } from "./routes/tables/layout";
 import AdminLogin from "./routes/login/admin/page";
+import TableDetailView from "./routes/tables/[tableId]/page";
+import { NuqsWouterAdapter } from "./lib/nuqs-adapter";
+import { AddItemsPage } from "./routes/tables/[tableId]/tabs/[tabId]/add-items/page";
 
 function Layout({ children }: React.PropsWithChildren) {
   return (
-    <NuqsAdapter>
+    <NuqsWouterAdapter>
       <AuthedZeroProvider
         zeroCacheServer={DMNO_PUBLIC_CONFIG.ZERO_CACHE_SERVER}
         backendServer={DMNO_PUBLIC_CONFIG.BACKEND_BASE_URL}
@@ -27,7 +29,7 @@ function Layout({ children }: React.PropsWithChildren) {
           <SearchParamsToaster />
         </RestaurantConfigProvider>
       </AuthedZeroProvider>
-    </NuqsAdapter>
+    </NuqsWouterAdapter>
   );
 }
 
@@ -42,6 +44,11 @@ export function App() {
         <Route path="/login/:id" component={StaffLogin} />
         <TablesLayout>
           <Route path="/tables" component={TablesPage} />
+          <Route path="/tables/:tableId" component={TableDetailView} />
+          <Route
+            path="/tables/:tableId/tabs/:tabId/add-items"
+            component={AddItemsPage}
+          />
         </TablesLayout>
 
         {/* Default route in a switch */}

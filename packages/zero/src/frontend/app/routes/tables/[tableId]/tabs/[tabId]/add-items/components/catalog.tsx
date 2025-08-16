@@ -1,18 +1,23 @@
 "use client";
 
-import { CardContent } from "@/components/ui/card";
+import { CardContent } from "@frontend/components/ui/card";
 import { useBasket } from "../contexts/basket";
-import { useCurrencyFormatter } from "@/contexts/restaurant-config";
-import { Category, MenuItem } from "@/lib/manifest/types";
+import { useCurrencyFormatter } from "@frontend/contexts/restaurant-config";
+import type { Category, MenuItem } from "../hook";
 import { AddMenuItemButton } from "./menu-item-buttons";
-import { DynamicIcon, IconName } from "lucide-react/dynamic";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 
 export type AddItemsCatalogProps = React.ComponentProps<"div"> & {
   category: Category;
   items: MenuItem[];
 };
 
-export const AddItemsCatalog = ({ items, className, category, ...props }: AddItemsCatalogProps) => {
+export const AddItemsCatalog = ({
+  items,
+  className,
+  category,
+  ...props
+}: AddItemsCatalogProps) => {
   const { items: basketItems } = useBasket();
   const formatCurrency = useCurrencyFormatter();
   return (

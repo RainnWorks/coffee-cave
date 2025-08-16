@@ -1,11 +1,18 @@
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { injectDmnoConfigVitePlugin } from '@dmno/vite-integration';
+import { injectDmnoConfigVitePlugin } from "@dmno/vite-integration";
+import path from "node:path";
 
 export default defineConfig({
   plugins: [injectDmnoConfigVitePlugin(), tailwindcss(), react()],
 
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "../"),
+      "@frontend": path.resolve(__dirname, "./app"),
+    },
+  },
   publicDir: "./frontend", // Static assets directory
   build: {
     outDir: "../dist/frontend", // Output to dist/client (relative to root)

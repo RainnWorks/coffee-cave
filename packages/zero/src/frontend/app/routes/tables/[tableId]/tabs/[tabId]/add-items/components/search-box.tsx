@@ -1,5 +1,5 @@
 "use client";
-import { Input } from "@/components/ui/input";
+import { Input } from "@frontend/components/ui/input";
 import { Search } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { searchParams } from "../search";

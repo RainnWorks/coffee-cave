@@ -16,14 +16,14 @@ export interface GroupableItem {
   addedAt?: DateTime | null;
   priceOverride?: number | null;
   nameOverride?: string | null;
-  menuItemId?: number | null;
-  allergenIds?: number[] | null;
+  menuItemId?: string | null;
+  allergenIds?: string[] | null;
   notes?: string | null;
   menuItem?: {
-    id: number;
+    id: string;
   } | null;
   item?: {
-    menuItemId?: number | null;
+    menuItemId?: string | null;
   } | null;
 }
 

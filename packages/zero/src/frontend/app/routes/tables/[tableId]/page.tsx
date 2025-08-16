@@ -18,13 +18,11 @@ import { CreateTabButton } from "./components/create-tab-button";
 import { cn } from "../../../lib/utils";
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { RemoveTabItemButton } from "./components/remove-tab-item-button";
-import { createCurrencyFormatter } from "../../../lib/currency";
 import { groupItems } from "../../../lib/basket";
 import { DateTime } from "luxon";
 import { AddItemsLink } from "./components/add-items-link";
 import { CloseTabButton } from "./components/close-tab-button";
 import { Switch } from "../../../components/ui/switch";
-import { connection } from "next/server";
 import { CloseTableButton } from "./components/close-table-button";
 import { Lock } from "lucide-react";
 import { useReconciledTableQuery } from "../../../lib/table-reconciler";
@@ -46,19 +44,14 @@ export default function TableDetailView({ params }: PageProps) {
   const formatCurrency = useCurrencyFormatter();
   const [{ tabId, showClosedTabs }, setQueryStates] = useQueryStates(
     {
-      tabId: parseAsString.withOptions({
-        clearOnDefault: true,
-      }),
-      showClosedTabs: parseAsBoolean.withDefault(false).withOptions({
-        clearOnDefault: true,
-      }),
+      tabId: parseAsString,
+      showClosedTabs: parseAsBoolean.withDefault(false),
     },
     {
       urlKeys: {
         tabId: "tid",
         showClosedTabs: "sct",
       },
-      clearOnDefault: true,
     }
   );
   const [table] = useReconciledTableQuery(tableId);

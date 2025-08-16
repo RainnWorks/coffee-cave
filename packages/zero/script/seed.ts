@@ -186,13 +186,13 @@ try {
     {
       id: generateId(),
       name: "Fresh Baked Croissant",
-      price: 2.95,
+      price: 295,
       categories: ["Pastries", "Breakfast"],
     },
     {
       id: generateId(),
       name: "Seasonal Fruit Tart",
-      price: 4.5,
+      price: 450,
       categories: ["Pastries", "Desserts"],
     },
   ];

@@ -1,30 +1,33 @@
 "use client";
 
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@frontend/components/ui/button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@frontend/components/ui/card";
+import { cn } from "@frontend/lib/utils";
 import { ArrowLeft, ClipboardList } from "lucide-react";
-import { DynamicIcon, IconName } from "lucide-react/dynamic";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { BasketItems } from "./basket-items";
 import { BasketTotal } from "./basket-total";
 import { AddItemsCatalog } from "./catalog";
-import Link from "next/link";
-import {
-  Allergen,
-  CategoryWithMenuItems,
-  MenuItem,
-} from "@/lib/manifest/types";
 import { useQueryStates } from "nuqs";
 import { searchParams, urlKeys } from "../search";
 import { useBasket } from "../contexts/basket";
-import { Badge } from "@/components/ui/badge";
-import { ReconciledTable } from "@/lib/manifest/table-reconciler";
+import { Badge } from "@frontend/components/ui/badge";
+import type { ReconciledTable } from "@/frontend/app/lib/table-reconciler";
+import type { Category } from "../hook";
+import type { MenuItem } from "../hook";
+import type { Allergen } from "../hook";
+import { Link } from "wouter";
 
 export interface AddItemsViewProps {
   onClickRecap: () => void;
   table: ReconciledTable;
-  tabId: number;
-  categories: CategoryWithMenuItems[];
+  tabId: string;
+  categories: Category[];
   allMenuItems: MenuItem[];
   allergens: Allergen[];
 }
@@ -107,7 +110,9 @@ export const AddItemsView = ({
         {activeCategory.menuItems.length > 0 ? (
           <AddItemsCatalog
             category={activeCategory}
-            items={activeCategory.menuItems}
+            items={activeCategory.menuItems
+              .map((item) => item.menuItem)
+              .filter((item) => !!item)}
           />
         ) : (
           <div className="col-span-full text-center py-12 text-gray-500">
