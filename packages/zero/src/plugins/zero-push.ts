@@ -4,6 +4,8 @@ import { PushProcessor, ZQLDatabase } from "@rocicorp/zero/server";
 import { PostgresJSConnection } from "@rocicorp/zero/pg";
 import postgres from "postgres"; // for ZQLDatabase
 import { schema } from "../schema";
+import { authedPlugin } from "./auth";
+import type { ReadonlyJSONValue } from "@rocicorp/zero";
 
 export const zeroPushPlugin = () => {
   // ------------ Zero Push processor ------------
@@ -13,11 +15,14 @@ export const zeroPushPlugin = () => {
       schema
     )
   );
-  return new Elysia().post(
+  return new Elysia().use(authedPlugin).post(
     "/push",
-    async ({ request }) => {
-      const body = await request.json();
-      return processor.process(createMutators(), body);
+    async ({ body, authPayload, request }) => {
+      return processor.process(
+        createMutators(authPayload),
+        new URL(request.url).searchParams,
+        body as ReadonlyJSONValue
+      );
     },
     { body: t.Unknown() } // accept any content-type
   );

@@ -61,7 +61,7 @@ CREATE TABLE "public"."restaurant_table" (
     "seats" INTEGER NOT NULL,
     "closed" BOOLEAN,
     "closedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "notes" VARCHAR,
     "createdById" VARCHAR NOT NULL,
     "closedById" VARCHAR,
@@ -116,13 +116,13 @@ CREATE TABLE "public"."menu_item_allergen" (
 -- CreateTable
 CREATE TABLE "public"."tab" (
     "id" VARCHAR NOT NULL,
-    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "locked" BOOLEAN,
     "closed" BOOLEAN,
     "closedAt" TIMESTAMP(3),
-    "closedByID" VARCHAR,
     "tableID" VARCHAR,
     "createdByID" VARCHAR,
+    "closedByID" VARCHAR,
 
     CONSTRAINT "tab_pkey" PRIMARY KEY ("id")
 );
@@ -133,7 +133,7 @@ CREATE TABLE "public"."tab_item" (
     "notes" VARCHAR,
     "nameOverride" VARCHAR,
     "priceOverride" BIGINT,
-    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "tabID" VARCHAR NOT NULL,
     "menuItemID" VARCHAR,
 
@@ -153,7 +153,8 @@ CREATE TABLE "public"."payment" (
     "id" VARCHAR NOT NULL,
     "amount" BIGINT NOT NULL,
     "notes" VARCHAR,
-    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdByID" VARCHAR,
     "tableID" VARCHAR,
 
     CONSTRAINT "payment_pkey" PRIMARY KEY ("id")
@@ -226,6 +227,9 @@ ALTER TABLE "public"."tab_item_allergy_restriction" ADD CONSTRAINT "tab_item_all
 
 -- AddForeignKey
 ALTER TABLE "public"."tab_item_allergy_restriction" ADD CONSTRAINT "tab_item_allergy_restriction_allergenID_fkey" FOREIGN KEY ("allergenID") REFERENCES "public"."allergen"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."payment" ADD CONSTRAINT "payment_createdByID_fkey" FOREIGN KEY ("createdByID") REFERENCES "public"."staff"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."payment" ADD CONSTRAINT "payment_tableID_fkey" FOREIGN KEY ("tableID") REFERENCES "public"."restaurant_table"("id") ON DELETE SET NULL ON UPDATE CASCADE;

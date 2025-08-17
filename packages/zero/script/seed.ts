@@ -473,6 +473,7 @@ try {
       notes: "Cash tip",
       createdAt: new Date(),
       tableID: createdTables[0].id, // Associate with first table
+      createdByID: adminStaff.id,
     },
   });
   console.log(
@@ -494,6 +495,7 @@ try {
       notes: "Partial payment - card",
       createdAt: new Date(),
       tableID: firstTab.tableId,
+      createdByID: adminStaff.id,
     },
   });
 
@@ -526,6 +528,7 @@ try {
         notes: "Full payment - cash",
         createdAt: new Date(),
         tableID: secondTab.tableId,
+        createdByID: adminStaff.id,
       },
     });
 

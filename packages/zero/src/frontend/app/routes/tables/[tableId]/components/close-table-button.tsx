@@ -27,12 +27,28 @@ export const CloseTableButton = ({
   const onClick = async () => {
     setIsLoading(true);
     try {
-      await z.mutate.restaurant_table.update({
-        id: tableId,
-        closed: true,
+      const tabsToClose = await z.query.tab
+        .where("tableID", "=", tableId)
+        .where("closed", "=", false)
+        .run();
+
+      console.log({ tabsToClose });
+      await z.mutateBatch(async (tx) => {
+        for (const tab of tabsToClose) {
+          await tx.tab.update({
+            id: tab.id,
+            closed: true,
+          });
+        }
+        await tx.restaurant_table.update({
+          id: tableId,
+          closed: true,
+        });
       });
 
       setLocation(`/tables`);
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -40,9 +56,10 @@ export const CloseTableButton = ({
 
   return locked ? (
     <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
-      <TooltipTrigger asChild>
+      <TooltipTrigger>
         <Button
           onClick={() => setShowTooltip(true)}
+          disabled
           variant="outline"
           size="sm"
           className={"gap-1 h-10"}

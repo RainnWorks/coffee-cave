@@ -64,6 +64,8 @@ model Staff {
   closedRestaurantTables  RestaurantTable[] @relation("restaurant_table_closedBy")
   createdRestaurantTables RestaurantTable[] @relation("restaurant_table_createdBy")
 
+  createdPayments Payment[] @relation("payment_createdBy")
+
   @@map("staff")
 }
 
@@ -188,33 +190,35 @@ model MenuItemAllergen {
 
 // Tabs (orders)
 model Tab {
-  id          String    @id @db.VarChar
-  createdAt   DateTime  @default(now())
-  locked      Boolean?
-  closed      Boolean?
-  closedAt    DateTime?
-  closedByID  String?   @db.VarChar
-  tableID     String?   @db.VarChar
-  createdByID String?   @db.VarChar
+  id        String    @id @db.VarChar
+  createdAt DateTime  @default(now())
+  locked    Boolean?
+  closed    Boolean?
+  closedAt  DateTime?
+  tableID   String?   @db.VarChar
 
   // Relationships
-  createdBy Staff?           @relation("tab_createdBy", fields: [createdByID], references: [id], onDelete: SetNull)
-  closedBy  Staff?           @relation("tab_closedBy", fields: [closedByID], references: [id], onDelete: SetNull)
-  table     RestaurantTable? @relation("tab_table", fields: [tableID], references: [id], onDelete: SetNull)
-  items     TabItem[]
+  createdByID String?          @db.VarChar
+  createdBy   Staff?           @relation("tab_createdBy", fields: [createdByID], references: [id], onDelete: SetNull)
+  closedByID  String?          @db.VarChar
+  closedBy    Staff?           @relation("tab_closedBy", fields: [closedByID], references: [id], onDelete: SetNull)
+  table       RestaurantTable? @relation("tab_table", fields: [tableID], references: [id], onDelete: SetNull)
+  items       TabItem[]
 
   @@map("tab")
 }
 
 // Tab items (items in an order)
 model TabItem {
-  id            String   @id @db.VarChar
-  notes         String?  @db.VarChar
-  nameOverride  String?  @db.VarChar
+  id            String    @id @db.VarChar
+  notes         String?   @db.VarChar
+  nameOverride  String?   @db.VarChar
   priceOverride BigInt?
-  createdAt     DateTime @default(now())
-  tabID         String   @db.VarChar
-  menuItemID    String?  @db.VarChar
+  createdAt     DateTime  @default(now())
+  readyAt       DateTime? // When kitchen marks item as ready to serve
+  servedAt      DateTime? // When item is marked as served to customer
+  tabID         String    @db.VarChar
+  menuItemID    String?   @db.VarChar
 
   // Relationships
   tab                 Tab                         @relation(fields: [tabID], references: [id], onDelete: Cascade)
@@ -244,10 +248,14 @@ model Payment {
   amount    BigInt
   notes     String?  @db.VarChar
   createdAt DateTime @default(now())
-  tableID   String?  @db.VarChar
+
+  createdByID String @db.VarChar
+  createdBy   Staff  @relation("payment_createdBy", fields: [createdByID], references: [id], onDelete: Restrict)
 
   // Relationships
-  table    RestaurantTable?     @relation("payment_table", fields: [tableID], references: [id], onDelete: SetNull)
+  tableID String          @db.VarChar
+  table   RestaurantTable @relation("payment_table", fields: [tableID], references: [id], onDelete: Restrict)
+
   tabItems PaymentTabItemPaid[]
 
   @@map("payment")

@@ -125,9 +125,9 @@ export const tabTable = table("tab")
     locked: boolean().optional(),
     closed: boolean().optional(),
     closedAt: number().optional(),
-    closedByID: string().optional(),
     tableID: string().optional(),
     createdByID: string().optional(),
+    closedByID: string().optional(),
   })
   .primaryKey("id");
 
@@ -138,6 +138,8 @@ export const tabItemTable = table("tab_item")
     nameOverride: string().optional(),
     priceOverride: number().optional(),
     createdAt: number(),
+    readyAt: number().optional(),
+    servedAt: number().optional(),
     tabID: string(),
     menuItemID: string().optional(),
   })
@@ -158,7 +160,8 @@ export const paymentTable = table("payment")
     amount: number(),
     notes: string().optional(),
     createdAt: number(),
-    tableID: string().optional(),
+    createdByID: string(),
+    tableID: string(),
   })
   .primaryKey("id");
 
@@ -219,6 +222,11 @@ export const staffTableRelationships = relationships(
       sourceField: ["id"],
       destField: ["createdById"],
       destSchema: restaurantTableTable,
+    }),
+    createdPayments: many({
+      sourceField: ["id"],
+      destField: ["createdByID"],
+      destSchema: paymentTable,
     }),
   }),
 );
@@ -429,6 +437,11 @@ export const tabItemAllergyRestrictionTableRelationships = relationships(
 export const paymentTableRelationships = relationships(
   paymentTable,
   ({ one, many }) => ({
+    createdBy: one({
+      sourceField: ["createdByID"],
+      destField: ["id"],
+      destSchema: staffTable,
+    }),
     table: one({
       sourceField: ["tableID"],
       destField: ["id"],

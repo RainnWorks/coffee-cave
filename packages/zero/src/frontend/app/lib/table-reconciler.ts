@@ -8,6 +8,7 @@ import type {
 } from "../../../generated/schema";
 import type { IconName } from "lucide-react/dynamic";
 import type { Zero } from "@rocicorp/zero";
+import { useMemo } from "react";
 
 const capitalize = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -40,6 +41,13 @@ const tableQuery = (z: Zero<Schema>) => {
     )
     .related("payments", (q) => q.related("tabItems"));
 };
+
+type TableQuery = ReturnType<typeof tableQuery>;
+
+const singleTableQuery = (z: Zero<Schema>) => {
+  return tableQuery(z).one();
+};
+type SingleTableQuery = ReturnType<typeof singleTableQuery>;
 
 const _OnlyUsedForTypes = () => {
   const z = useTypedZero();
@@ -136,17 +144,34 @@ const reconcileTable = (table: Table) => {
 };
 
 export type ReconciledTable = ReturnType<typeof reconcileTable>;
+export type ReconciledTabItem =
+  ReconciledTable["tabs"][number]["tabItems"][number];
 
-export const useReconciledTableQuery = (id: string) => {
+export const useReconciledTableQuery = (
+  id: string,
+  q?: (query: SingleTableQuery) => SingleTableQuery
+) => {
   const z = useTypedZero();
-  const [table, { type }] = useQuery(tableQuery(z).where("id", "=", id).one());
+  const query = useMemo(() => singleTableQuery(z).where("id", "=", id), [id]);
+  const memoizedQuery = useMemo(() => (q ? q(query) : query), [q, query]);
+  const [table, { type }] = useQuery(memoizedQuery);
 
-  return [table ? reconcileTable(table) : undefined, { type }] as const;
+  return useMemo(
+    () => [table ? reconcileTable(table) : undefined, { type }] as const,
+    [table, type]
+  );
 };
 
-export const useReconciledTablesQuery = () => {
+export const useReconciledTablesQuery = (
+  q?: (query: TableQuery) => TableQuery
+) => {
   const z = useTypedZero();
-  const [tables, { type }] = useQuery(tableQuery(z));
+  const query = useMemo(() => tableQuery(z), []);
+  const memoizedQuery = useMemo(() => (q ? q(query) : query), [q, query]);
+  const [tables, { type }] = useQuery(memoizedQuery);
 
-  return [tables.map(reconcileTable), { type }] as const;
+  return useMemo(
+    () => [tables.map(reconcileTable), { type }] as const,
+    [tables, type]
+  );
 };

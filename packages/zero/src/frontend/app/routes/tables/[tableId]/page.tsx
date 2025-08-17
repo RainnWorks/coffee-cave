@@ -42,38 +42,49 @@ export default function TableDetailView({ params }: PageProps) {
 
   const { timeZone } = useRestaurantConfig();
   const formatCurrency = useCurrencyFormatter();
-  const [{ tabId, showClosedTabs }, setQueryStates] = useQueryStates(
-    {
-      tabId: parseAsString,
-      showClosedTabs: parseAsBoolean.withDefault(false),
-    },
-    {
-      urlKeys: {
-        tabId: "tid",
-        showClosedTabs: "sct",
+  const [{ tabId, showClosedTabs, showPaidItems }, setQueryStates] =
+    useQueryStates(
+      {
+        tabId: parseAsString,
+        showClosedTabs: parseAsBoolean.withDefault(false),
+        showPaidItems: parseAsBoolean.withDefault(false),
       },
-    }
-  );
+      {
+        urlKeys: {
+          tabId: "tid",
+          showClosedTabs: "sct",
+          showPaidItems: "spi",
+        },
+      }
+    );
   const [table] = useReconciledTableQuery(tableId);
 
   if (!table) return <Redirect to="/tables" />;
 
-  const activeTabId = tabId ?? table.tabs?.[0]?.id;
+  const activeTabId =
+    tabId ??
+    table.tabs?.filter((tab) => showClosedTabs || !tab.closed)?.[0]?.id;
   const activeTab = table.tabs?.find((tab) => tab.id === activeTabId);
 
   if (activeTab?.closed && !showClosedTabs) {
     const firstUnclosedTab = table.tabs?.find((tab) => !tab.closed);
-    setQueryStates({
-      tabId: firstUnclosedTab?.id,
-    });
+    if (firstUnclosedTab)
+      setQueryStates({
+        tabId: firstUnclosedTab?.id,
+      });
   }
 
   const activeTabItems = Object.values(
     groupItems(
-      activeTab?.tabItems.map((tabItem) => ({
-        ...tabItem,
-        menuItemId: tabItem.menuItem?.id,
-      })) ?? []
+      activeTab?.tabItems
+        .filter((tabItem) => {
+          if (!showPaidItems) return !tabItem.paid;
+          return true;
+        })
+        .map((tabItem) => ({
+          ...tabItem,
+          menuItemId: tabItem.menuItem?.id,
+        })) ?? []
     )
   );
 
@@ -169,15 +180,22 @@ export default function TableDetailView({ params }: PageProps) {
           <div className="flex flex-col flex-1 gap-2 p-4 ">
             <div className="flex space-x-4 items-center h-10">
               <div className="text-sm text-gray-500">Tabs</div>
-              <Link
-                className="flex items-center gap-1 text-sm"
-                href={`/tables/${
-                  table.id
-                }?tid=${activeTabId}&sct=${!showClosedTabs}`}
-              >
-                <Switch checked={!!showClosedTabs}></Switch>
-                Show Closed Tabs
-              </Link>
+              <div className="flex items-center gap-1 text-sm">
+                <Switch
+                  disabled={
+                    table.tabs?.filter((tab) => tab.closed).length === 0
+                  }
+                  onCheckedChange={(checked) => {
+                    setQueryStates({
+                      showClosedTabs: checked,
+                      showPaidItems: true,
+                    });
+                  }}
+                  checked={!!showClosedTabs}
+                />
+                Show ({table.tabs?.filter((tab) => tab.closed).length}) Closed
+                Tabs
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {table.tabs
@@ -190,6 +208,7 @@ export default function TableDetailView({ params }: PageProps) {
                         setQueryStates({
                           tabId: tab.id,
                           showClosedTabs: !!showClosedTabs,
+                          showPaidItems: !!showPaidItems,
                         });
                       }}
                       key={"tab-" + tab.id}
@@ -219,9 +238,17 @@ export default function TableDetailView({ params }: PageProps) {
 
           <div className="flex flex-col gap-2 p-4 border-l">
             <div className="text-sm text-gray-500">Remaining Balance</div>
-            <div className="text-2xl font-bold text-red-700 tabular-nums text-center">
+            <div
+              className={`text-2xl font-bold ${
+                table.remainingBalance > 0
+                  ? "text-red-700"
+                  : table.remainingBalance === 0
+                  ? "text-green-700"
+                  : "text-gray-700"
+              } tabular-nums text-center`}
+            >
               {formatCurrency(
-                table.total - (table.total - table.remainingBalance)
+                table.remainingBalance
               )}
             </div>
             {table.remainingBalance > 0 && (
@@ -263,7 +290,23 @@ export default function TableDetailView({ params }: PageProps) {
 
             <div className="rounded-md border">
               <div className="flex items-center justify-between border-b bg-gray-50 p-3">
-                <h4 className="font-medium">Items</h4>
+                <div className="flex items-center gap-4">
+                  <h4 className="font-medium">Items</h4>
+                  {activeTab.tabItems?.filter((tabItem) => tabItem.paid)
+                    .length > 0 && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Switch
+                        onCheckedChange={(checked) => {
+                          setQueryStates({
+                            showPaidItems: checked,
+                          });
+                        }}
+                        checked={!!showPaidItems}
+                      />
+                      Show Paid Items
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   {!activeTab.closed ? (
                     <>

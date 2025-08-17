@@ -23,13 +23,14 @@ export const CreateTabButton = ({
   const handleCreateNewTab = async () => {
     setIsCreatingTab(true);
     try {
+      const tabId = generateId("tab");
       await z.mutate.tab.insert({
-        id: generateId("tab"),
+        id: tabId,
         createdAt: Date.now(),
         tableID: tableId,
       });
       // Navigate to add items page
-      setLocation(`/tables/${tableId}/tabs/${generateId("tab")}/add-items`);
+      setLocation(`/tables/${tableId}/tabs/${tabId}/add-items`);
     } catch (error) {
       console.error("Error creating tab:", error);
       toast.error("Failed to create new tab");

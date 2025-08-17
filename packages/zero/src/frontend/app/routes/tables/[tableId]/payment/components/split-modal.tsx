@@ -1,28 +1,30 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@frontend/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogContentProps,
-  DialogProps,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { useCurrencyFormatter } from "@/contexts/restaurant-config";
+  type DialogContentProps,
+  type DialogProps,
+} from "@frontend/components/ui/dialog";
+import { Label } from "@frontend/components/ui/label";
+import { useCurrencyFormatter } from "@frontend/contexts/restaurant-config";
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@frontend/components/ui/checkbox";
 import { CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@frontend/lib/utils";
 import { toast } from "sonner";
-import { addPayment } from "../actions/add-payment";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@frontend/components/ui/tooltip";
+import { useAuth } from "@/frontend/app/AuthedZeroProvider";
+import { useTypedZero } from "@/frontend/app/lib/zero";
+import { generateId } from "@/utils/ids";
 
 export function calculateSplitAmount(
   total: number,
@@ -39,9 +41,9 @@ interface PaymentPart {
 }
 
 export interface SplitModalProps extends DialogProps {
-  tableId: number;
+  tableId: string;
   totalToSplit: number;
-  tabItemIds: number[];
+  tabItemIds: string[];
   note?: string;
   defaultSplitCount: number;
   dialogContentProps?: DialogContentProps;
@@ -59,6 +61,8 @@ export const SplitModal = ({
   onOpenChange,
   ...props
 }: SplitModalProps) => {
+  const z = useTypedZero();
+  const auth = useAuth();
   const formatCurrency = useCurrencyFormatter();
 
   const [splitCount, setSplitCount] = useState(defaultSplitCount);
@@ -134,20 +138,26 @@ export const SplitModal = ({
     setIsSubmitting(true);
     if (isSubmitting) return;
     try {
-      const { error, result } = await addPayment({
-        tableId: tableId,
-        tabItemIds: tabItemIds,
-        paidAmount: totalToSplit,
-        notes: note,
+      const paymentId = generateId("payment");
+      z.mutateBatch(async (tx) => {
+        await tx.payment.insert({
+          id: paymentId,
+          tableID: tableId,
+          amount: totalToSplit,
+          createdAt: Date.now(),
+          notes: note,
+          createdByID: auth.userID!,
+        });
+        for (const item of tabItemIds) {
+          await tx.payment_tab_item_paid.insert({
+            paymentID: paymentId,
+            tabItemID: item,
+          });
+        }
       });
 
-      if (error) {
-        toast.error(error);
-        return;
-      } else {
-        toast.success(`Payment ${result!.id} added successfully`);
-        onPaymentSuccess?.();
-      }
+      toast.success(`Payment ${paymentId} added successfully`);
+      onPaymentSuccess?.();
     } catch (error) {
       toast.error("Failed to add payment: " + (error as Error).message);
     } finally {

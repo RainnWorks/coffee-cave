@@ -34,19 +34,26 @@ export function AddItemsPage({
     async (basketItems: BasketItem[]) => {
       try {
         await z.mutateBatch(async (x) => {
-          await Promise.all(
-            basketItems.map((item) => {
-              x.tab_item.insert({
-                id: generateId("tabItem"),
-                createdAt: Date.now(),
-                tabID: tabId,
-                menuItemID: item.item.menuItemId,
-                nameOverride: item.item.nameOverride,
-                priceOverride: item.item.priceOverride,
-                notes: item.notes,
-              });
+          for await (const item of basketItems) {
+            console.log({
+              id: generateId("tabItem"),
+              createdAt: Date.now(),
+              tabID: tabId,
+              menuItemID: item.item.menuItemId,
+              nameOverride: item.item.nameOverride,
+              priceOverride: item.item.priceOverride,
+              notes: item.notes,
             })
-          );
+            await x.tab_item.insert({
+              id: generateId("tabItem"),
+              createdAt: Date.now(),
+              tabID: tabId,
+              menuItemID: item.item.menuItemId,
+              nameOverride: item.item.nameOverride,
+              priceOverride: item.item.priceOverride,
+              notes: item.notes,
+            });
+          }
         });
         setLocation(`/tables/${tableId}?tid=${tabId}`);
       } catch (error) {

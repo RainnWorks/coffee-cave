@@ -21,32 +21,26 @@ export const CloseTabButton = ({
   tabId: string;
   locked: boolean;
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
   const [location, setLocation] = useLocation();
 
   const z = useTypedZero();
   const onClick = async () => {
-    setIsLoading(true);
-    try {
-      await z.mutate.tab.update({
-        id: tabId,
-        closed: true,
-      });
+    await z.mutate.tab.update({
+      id: tabId,
+      closed: true,
+    });
 
-      const table = await z.query.restaurant_table
-        .where("id", "=", tableId)
-        .related("tabs")
-        .one()
-        .run();
+    const table = await z.query.restaurant_table
+      .where("id", "=", tableId)
+      .related("tabs")
+      .one()
+      .run();
 
-      const firstUnclosedTabId = table?.tabs?.find((tab) => !tab.closedAt)?.id;
-      setLocation(
-        `/tables/${tableId}` +
-          (firstUnclosedTabId ? `?tid=${firstUnclosedTabId}` : "")
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    const firstUnclosedTabId = table?.tabs?.find((tab) => !tab.closedAt)?.id;
+    setLocation(
+      `/tables/${tableId}` +
+        (firstUnclosedTabId ? `?tid=${firstUnclosedTabId}` : "")
+    );
   };
 
   return locked ? (
@@ -63,11 +57,7 @@ export const CloseTabButton = ({
     </Tooltip>
   ) : (
     <Button variant="outline" className={cn("h-8 gap-1")} onClick={onClick}>
-      {isLoading ? (
-        <Loader className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <CopyCheck className="h-3.5 w-3.5" />
-      )}
+      <CopyCheck className="h-3.5 w-3.5" />
       Close Tab
     </Button>
   );

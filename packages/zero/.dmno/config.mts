@@ -56,6 +56,11 @@ export default defineDmnoService({
       sensitive: true,
       required: true,
     },
+    ZERO_MUTATE_URL: {
+      extends: DmnoBaseTypes.url,
+      required: true,
+      value: () => DMNO_CONFIG.BACKEND_BASE_URL + "/push",
+    },
     ZERO_REPLICA_FILE: {
       sensitive: true,
       required: true,

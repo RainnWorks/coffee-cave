@@ -3,14 +3,14 @@
 import type React from "react";
 
 import { useState, useEffect, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@frontend/lib/utils";
+import { Button } from "@frontend/components/ui/button";
 import { Plus, Minus } from "lucide-react";
 import {
   useCoinsAndNotes,
   useCurrencyFormatter,
   useCurrencyUtils,
-} from "@/contexts/restaurant-config";
+} from "@frontend/contexts/restaurant-config";
 
 export interface ChangeCalculatorProps {
   /**

@@ -9,6 +9,7 @@ import React, {
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { createAuthClient, AuthError } from "./lib/auth";
 import { schema } from "../../schema";
+import { createMutators } from "@/mutators";
 
 /**
  * Authentication context - only for auth operations
@@ -18,6 +19,7 @@ interface AuthContextType {
   // Authentication state
   isLoggedIn: boolean;
   userID: string | null;
+  role: "admin" | "staff" | null;
   isLoading: boolean;
 
   // Authentication methods
@@ -187,6 +189,7 @@ export const AuthedZeroProvider: React.FC<{
     () => ({
       isLoggedIn,
       userID,
+      role,
       isLoading,
       loginStaff,
       loginAdmin,
@@ -227,6 +230,11 @@ export const AuthedZeroProvider: React.FC<{
         server={zeroCacheServer}
         schema={schema}
         auth={zeroAuthFunction}
+        mutators={createMutators({
+          sub: userID ?? undefined,
+          role: role ?? undefined,
+        })}
+        
       >
         {children}
       </ZeroProvider>

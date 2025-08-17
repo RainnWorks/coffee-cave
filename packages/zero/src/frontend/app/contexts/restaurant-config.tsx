@@ -43,10 +43,12 @@ export function RestaurantConfigProvider({
   const z = useTypedZero();
   const [config] = useSuspenseQuery(z.query.restaurant_settings.one());
 
+  const memoizedConfig = useMemo(
+    () => (config ? { ...config, isSetUp: true } : DEFAULT_CONFIG),
+    [config]
+  );
   return (
-    <RestaurantConfigContext.Provider
-      value={config ? { ...config, isSetUp: true } : DEFAULT_CONFIG}
-    >
+    <RestaurantConfigContext.Provider value={memoizedConfig}>
       {children}
     </RestaurantConfigContext.Provider>
   );

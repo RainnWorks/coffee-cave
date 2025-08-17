@@ -25,7 +25,12 @@ export default function TablesPage() {
   const { name } = useRestaurantConfig();
 
   const z = useTypedZero();
-  const [tables, { type }] = useReconciledTablesQuery();
+  const [tables, { type }] = useReconciledTablesQuery((q) =>
+    q.where(({ or, cmp }) =>
+      or(cmp("closed", "=", false), cmp("closed", "IS", null))
+    )
+  );
+
   const { logout } = useAuth();
 
   // Count total open tabs
