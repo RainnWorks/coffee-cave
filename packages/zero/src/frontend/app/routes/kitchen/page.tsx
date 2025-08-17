@@ -51,21 +51,10 @@ export default function KitchenView() {
   const [, setLocation] = useLocation();
   const z = useTypedZero();
 
-  // Query for all tab items (we'll filter by status in the component)
-  const [tabItems, { type: queryType }] = useQuery(
-    z.query.tab_item
-      .related("tab", (q) => q.related("table"))
-      .related("menuItem", (q) =>
-        q.related("categories", (q) => q.related("category"))
-      )
-      .related("allergyRestrictions", (q) => q.related("allergen"))
-  );
-
   // Query for all categories from database
   const [categories, { type: categoriesQueryType }] = useQuery(
     z.query.category
   );
-  const isLoading = queryType !== "complete";
 
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
   const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([
@@ -80,24 +69,60 @@ export default function KitchenView() {
   const statusOptions: MultiSelectOption[] = [
     { label: "Prepping", value: "prepping" },
     { label: "Ready to Serve", value: "ready" },
-    { label: "Served", value: "served" },
+    // { label: "Served", value: "served" },
   ];
 
   // Category filter options from database
   const categoryOptions: MultiSelectOption[] = useMemo(() => {
     if (!categories) return [];
     return categories.map((category) => {
-
       return {
         label: category.name,
         value: category.id,
-        icon: () => <DynamicIcon name={category.icon as IconName} />  ,
+        icon: () => <DynamicIcon name={category.icon as IconName} />,
       };
     });
   }, [categories]);
 
+  // Query for tab items filtered by status using database OR conditions
+  const tabItemsQuery = useMemo(() => {
+    return z.query.tab_item
+      .where(({ cmp, and, or, not }) => {
+        if (statusFilters.length === 0) {
+          // If no status filters, return no results
+          return cmp("id", "=", "__never_match__");
+        }
+
+        const conditions = statusFilters.map((status) => {
+          if (status === "prepping") {
+            return and(cmp("readyAt", "IS", null), cmp("servedAt", "IS", null));
+          } else if (status === "ready") {
+            return and(
+              not(cmp("readyAt", "IS", null)),
+              cmp("servedAt", "IS", null)
+            );
+          } else {
+            return and(
+              not(cmp("readyAt", "IS", null)),
+              not(cmp("servedAt", "IS", null))
+            );
+          }
+        });
+
+        return conditions.length === 1 ? conditions[0] : or(...conditions);
+      })
+      .related("tab", (q) => q.related("table"))
+      .related("menuItem", (q) =>
+        q.related("categories", (q) => q.related("category"))
+      )
+      .related("allergyRestrictions", (q) => q.related("allergen"));
+  }, [z, statusFilters]);
+
+  const [tabItems, { type: queryType }] = useQuery(tabItemsQuery);
+  const isLoading = queryType !== "complete";
+
   // Transform tab items to kitchen items with status determination
-  const allOrderItems: KitchenItem[] = useMemo(() => {
+  const orderItems: KitchenItem[] = useMemo(() => {
     if (!tabItems) return [];
 
     return tabItems.map((item) => {
@@ -130,11 +155,6 @@ export default function KitchenView() {
       };
     });
   }, [tabItems]);
-
-  // Filter items based on selected status filters
-  const orderItems: KitchenItem[] = useMemo(() => {
-    return allOrderItems.filter((item) => statusFilters.includes(item.status));
-  }, [allOrderItems, statusFilters]);
 
   const [filteredItems, setFilteredItems] = useState<KitchenItem[]>([]);
 
