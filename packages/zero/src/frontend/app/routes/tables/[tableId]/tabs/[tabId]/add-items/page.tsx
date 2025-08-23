@@ -32,21 +32,13 @@ export function AddItemsPage({
 
   const onSubmit = useCallback(
     async (basketItems: BasketItem[]) => {
+      const now = Date.now();
       try {
         await z.mutateBatch(async (x) => {
           for await (const item of basketItems) {
-            console.log({
-              id: generateId("tabItem"),
-              createdAt: Date.now(),
-              tabID: tabId,
-              menuItemID: item.item.menuItemId,
-              nameOverride: item.item.nameOverride,
-              priceOverride: item.item.priceOverride,
-              notes: item.notes,
-            })
             await x.tab_item.insert({
               id: generateId("tabItem"),
-              createdAt: Date.now(),
+              createdAt: now,
               tabID: tabId,
               menuItemID: item.item.menuItemId,
               nameOverride: item.item.nameOverride,
