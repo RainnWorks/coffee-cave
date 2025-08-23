@@ -1,0 +1,99 @@
+// tenant.prisma - Multi-tenant extensions to the main schema
+// This file contains the tenant model and foreign key relationships
+// to enable multi-tenant isolation across all tenant-scoped tables.
+
+// Top-level tenant entity
+model Tenant {
+  id        String   @id @db.VarChar
+  name      String   @db.VarChar
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Tenant can have one restaurant settings configuration
+  restaurantSettings RestaurantSettings?
+  
+  // All tenant-scoped entities
+  staff              Staff[]
+  restaurantTables   RestaurantTable[]
+  categories         Category[]
+  allergens          Allergen[]
+  menuItems          MenuItem[]
+  tabs               Tab[]
+  tabItems           TabItem[]
+  payments           Payment[]
+
+  @@map("tenant")
+}
+
+// Extend existing models with tenant relationships
+// Note: These extensions will be merged with the main schema.prisma
+
+model RestaurantSettings {
+  // Add tenant relationship
+  tenantId String @unique @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Staff {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model RestaurantTable {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model Category {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model Allergen {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model MenuItem {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model Tab {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model TabItem {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
+model Payment {
+  // Add tenant relationship
+  tenantId String @db.VarChar
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}

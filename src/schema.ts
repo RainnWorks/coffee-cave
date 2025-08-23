@@ -24,6 +24,7 @@ export type { Schema } from "./generated/schema";
 export type AuthData = {
   sub?: string; // staff.id of the logged-in user
   role?: "admin" | "staff" | "anon";
+  tenantId?: string; // tenant.id for multi-tenant isolation
 };
 
 // Permission helper functions to reduce duplication
