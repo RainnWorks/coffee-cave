@@ -1,5 +1,5 @@
+import crypto from "node:crypto";
 import * as argon2 from "argon2";
-import crypto from "crypto";
 
 /**
  * Authentication utilities for secure password and PIN handling
@@ -24,7 +24,7 @@ export const generateSalt = (): string => {
  */
 export const hashWithSalt = async (
   value: string,
-  salt: string
+  salt: string,
 ): Promise<string> => {
   const pepper = DMNO_CONFIG.AUTH_PEPPER;
 
@@ -53,7 +53,7 @@ export const hashWithSalt = async (
 export const verifyWithSalt = async (
   value: string,
   salt: string,
-  storedHash: string
+  storedHash: string,
 ): Promise<boolean> => {
   const pepper = DMNO_CONFIG.AUTH_PEPPER;
 
@@ -70,7 +70,7 @@ export const verifyWithSalt = async (
  * @returns Object containing hash and salt
  */
 export const createHashAndSalt = async (
-  value: string
+  value: string,
 ): Promise<{ hash: string; salt: string }> => {
   const salt = generateSalt();
   const hash = await hashWithSalt(value, salt);

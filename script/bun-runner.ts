@@ -1,4 +1,3 @@
-import { $ } from "bun";
 import { styleText } from "node:util";
 
 type Style = Parameters<typeof styleText>[0];
@@ -147,7 +146,7 @@ async function runCommand(spec: CommandSpec, index: number) {
 
 async function runSteps(
   steps: (CommandSpec | CommandSpec[])[],
-  startIndex = 0
+  startIndex = 0,
 ): Promise<number> {
   let index = startIndex;
 
@@ -173,7 +172,7 @@ export async function bunRun({ up, down }: BunRunConfig) {
   try {
     // Run "up" sequence
     await runSteps(up);
-  } catch (error) {
+  } catch {
     process.exit(1);
   }
 }

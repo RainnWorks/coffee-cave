@@ -1,8 +1,13 @@
-import { Sequelize } from "sequelize";
-import { PrismaClient } from "@prisma/client";
+/**
+ * Database module - DEPRECATED
+ *
+ * This file is kept for backwards compatibility but should not be used.
+ *
+ * For auth queries, use: src/utils/db.ts (raw SQL)
+ * For Zero queries/mutations, use: @rocicorp/zero
+ *
+ * Drizzle is only used for schema generation, not runtime queries.
+ */
 
-export const sequelize = new Sequelize(DMNO_CONFIG.ZERO_UPSTREAM_DB, {
-  dialect: "postgres",
-});
-
-export const db = new PrismaClient();
+// Re-export the raw SQL connection for any legacy code
+export { sql } from "./utils/db";

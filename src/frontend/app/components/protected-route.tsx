@@ -1,9 +1,9 @@
-import { useMemo, type ComponentProps } from "react";
+import { type ComponentProps, useMemo } from "react";
 import {
-  Redirect,
-  Route,
   type DefaultParams,
   type PathPattern,
+  Redirect,
+  Route,
   type RouteProps,
 } from "wouter";
 
@@ -21,12 +21,9 @@ export function ProtectedRoute<
 }) {
   const RedirectComponent = useMemo(
     () => () => <Redirect to={redirectTo} />,
-    [redirectTo]
+    [redirectTo],
   );
   return (
-    <Route
-      path={path}
-      component={isAllowed ? Component : RedirectComponent}
-    />
+    <Route path={path} component={isAllowed ? Component : RedirectComponent} />
   );
 }

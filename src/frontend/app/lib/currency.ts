@@ -17,10 +17,10 @@ export const currencyUtils = ({
   return {
     fractionDigits,
     minorToMajor: (amountInBaseUnits: number): number => {
-      return amountInBaseUnits / Math.pow(10, fractionDigits);
+      return amountInBaseUnits / 10 ** fractionDigits;
     },
     majorToMinor: (amount: number): number => {
-      return Math.round(amount * Math.pow(10, fractionDigits));
+      return Math.round(amount * 10 ** fractionDigits);
     },
   };
 };

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { useLocation, useSearchParams } from "wouter";
+import { useSearchParams } from "wouter";
 
 export const SearchParamsToaster = () => {
   const [searchParams] = useSearchParams();
@@ -9,12 +9,14 @@ export const SearchParamsToaster = () => {
     const errorMessage = searchParams.get("error");
     if (errorMessage) {
       if (Array.isArray(errorMessage)) {
-        errorMessage.forEach((e) => toast.error(e));
+        for (const e of errorMessage) {
+          toast.error(e);
+        }
       } else {
         toast.error(errorMessage);
       }
     }
-  }, [location, searchParams]);
+  }, [searchParams]);
 
   return null;
 };

@@ -1,11 +1,10 @@
-import { DateTime } from "luxon";
+import type { DateTime } from "luxon";
 
-const hashCode = (str: string) => {
+const hashCode = (str: string): number => {
   let hash = 0;
-  let i, chr;
   if (str.length === 0) return hash;
-  for (i = 0; i < str.length; i++) {
-    chr = str.charCodeAt(i);
+  for (let i = 0; i < str.length; i++) {
+    const chr = str.charCodeAt(i);
     hash = (hash << 5) - hash + chr;
     hash |= 0; // Convert to 32bit integer
   }
@@ -60,32 +59,35 @@ export type GroupedItem<T extends object> = T & {
 };
 
 export const groupItems = <T extends object>(
-  items: T[]
+  items: T[],
 ): { [key: string]: GroupedItem<T> } => {
   const result =
-    items.reduce((acc, item, i) => {
-      const itemKey = generateItemId(item);
-      const coercedItem = item as GroupableItem;
-      const existingItem = acc[itemKey] as
-        | (GroupableItem & GroupedItem<T>)
-        | undefined;
-      return {
-        ...acc,
-        [itemKey]: {
-          ...item,
-          key: itemKey,
-          itemIndexes: !existingItem ? [i] : [...existingItem.itemIndexes, i],
-          addedAt:
-            !existingItem ||
-            !existingItem.addedAt ||
-            !coercedItem.addedAt ||
-            existingItem.addedAt > coercedItem.addedAt
-              ? coercedItem.addedAt
-              : existingItem.addedAt,
-          items: !existingItem ? [item] : [...existingItem.items, item],
-          count: (existingItem?.count || 0) + 1,
-        },
-      };
-    }, {} as { [key: string]: GroupedItem<T> }) ?? {};
+    items.reduce(
+      (acc, item, i) => {
+        const itemKey = generateItemId(item);
+        const coercedItem = item as GroupableItem;
+        const existingItem = acc[itemKey] as
+          | (GroupableItem & GroupedItem<T>)
+          | undefined;
+        return {
+          ...acc,
+          [itemKey]: {
+            ...item,
+            key: itemKey,
+            itemIndexes: !existingItem ? [i] : [...existingItem.itemIndexes, i],
+            addedAt:
+              !existingItem ||
+              !existingItem.addedAt ||
+              !coercedItem.addedAt ||
+              existingItem.addedAt > coercedItem.addedAt
+                ? coercedItem.addedAt
+                : existingItem.addedAt,
+            items: !existingItem ? [item] : [...existingItem.items, item],
+            count: (existingItem?.count || 0) + 1,
+          },
+        };
+      },
+      {} as { [key: string]: GroupedItem<T> },
+    ) ?? {};
   return result;
 };

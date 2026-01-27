@@ -16,22 +16,33 @@ type Builtin = Primitive | Date | RegExp | Error | Fn;
  */
 export type Immutable<T> =
   // Leave built-ins and primitives as-is
-  T extends Builtin ? T
-  // Promises: make the resolved type immutable
-  : T extends Promise<infer U> ? Promise<Immutable<U>>
-  // Maps/Sets (and readonly variants)
-  : T extends ReadonlyMap<infer K, infer V> ? ReadonlyMap<Immutable<K>, Immutable<V>>
-  : T extends Map<infer K, infer V> ? ReadonlyMap<Immutable<K>, Immutable<V>>
-  : T extends ReadonlySet<infer U> ? ReadonlySet<Immutable<U>>
-  : T extends Set<infer U> ? ReadonlySet<Immutable<U>>
-  // Weak collections (no readonly types exist)
-  : T extends WeakMap<infer K, infer V> ? WeakMap<Immutable<K>, Immutable<V>>
-  : T extends WeakSet<infer U> ? WeakSet<Immutable<U>>
-  // Tuples and readonly arrays: preserve shape/indices as readonly
-  : T extends readonly unknown[] ? { readonly [P in keyof T]: Immutable<T[P]> }
-  // Mutable arrays: make readonly and immutabilize elements
-  : T extends unknown[] ? ReadonlyArray<Immutable<T[number]>>
-  // Objects: recursively readonly
-  : T extends object ? { readonly [P in keyof T]: Immutable<T[P]> }
-  // Fallback
-  : T;
+  T extends Builtin
+    ? T
+    : // Promises: make the resolved type immutable
+      T extends Promise<infer U>
+      ? Promise<Immutable<U>>
+      : // Maps/Sets (and readonly variants)
+        T extends ReadonlyMap<infer K, infer V>
+        ? ReadonlyMap<Immutable<K>, Immutable<V>>
+        : T extends Map<infer K, infer V>
+          ? ReadonlyMap<Immutable<K>, Immutable<V>>
+          : T extends ReadonlySet<infer U>
+            ? ReadonlySet<Immutable<U>>
+            : T extends Set<infer U>
+              ? ReadonlySet<Immutable<U>>
+              : // Weak collections (no readonly types exist)
+                T extends WeakMap<infer K, infer V>
+                ? WeakMap<Immutable<K>, Immutable<V>>
+                : T extends WeakSet<infer U>
+                  ? WeakSet<Immutable<U>>
+                  : // Tuples and readonly arrays: preserve shape/indices as readonly
+                    T extends readonly unknown[]
+                    ? { readonly [P in keyof T]: Immutable<T[P]> }
+                    : // Mutable arrays: make readonly and immutabilize elements
+                      T extends unknown[]
+                      ? ReadonlyArray<Immutable<T[number]>>
+                      : // Objects: recursively readonly
+                        T extends object
+                        ? { readonly [P in keyof T]: Immutable<T[P]> }
+                        : // Fallback
+                          T;

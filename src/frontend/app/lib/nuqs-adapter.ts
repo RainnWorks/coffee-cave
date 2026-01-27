@@ -16,7 +16,7 @@ function useWouterAdapter() {
   // A stable URLSearchParams snapshot derived from wouter's search string
   const searchParams = useMemo(
     () => new URLSearchParams(searchString),
-    [searchString]
+    [searchString],
   );
 
   /**
@@ -67,5 +67,5 @@ function useWouterAdapter() {
  * </Router>
  */
 export const NuqsWouterAdapter: FC<PropsWithChildren> = createAdapterProvider(
-  useWouterAdapter
+  useWouterAdapter,
 ) as FC<PropsWithChildren>;

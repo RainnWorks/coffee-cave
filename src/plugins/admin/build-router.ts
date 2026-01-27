@@ -4,8 +4,7 @@ import type {
   AppController,
   CurrentAdmin,
 } from "adminjs";
-import { AdminJS } from "adminjs";
-import { Router as AdminJSRouter } from "adminjs";
+import { type AdminJS, Router as AdminJSRouter } from "adminjs";
 import type { AnyElysia, InferContext } from "elysia";
 import { Elysia } from "elysia";
 import { createResponse } from "node-mocks-http";
@@ -13,7 +12,7 @@ import { createResponse } from "node-mocks-http";
 export const buildAssets = (
   admin: AdminJS,
   assets: (typeof AdminJSRouter)["assets"],
-  routes: (typeof AdminJSRouter)["routes"]
+  routes: (typeof AdminJSRouter)["routes"],
 ) => {
   const router = new Elysia();
 
@@ -21,7 +20,7 @@ export const buildAssets = (
   // Note: We want components.bundle.js to be globally available. In production it is served as a .js asset, meanwhile
   // in local environments it's a route with "bundleComponents" action assigned.
   const componentBundlerRoute = routes.find(
-    (r) => r.action === "bundleComponents"
+    (r) => r.action === "bundleComponents",
   );
   if (componentBundlerRoute) {
     buildRoute(componentBundlerRoute, router, admin);
@@ -38,15 +37,15 @@ const routeHandler =
   <T extends Elysia>(
     admin: AdminJS,
     route: (typeof AdminJSRouter)["routes"][0],
-    adminGetter?: (ctx: InferContext<T>) => CurrentAdmin
+    adminGetter?: (ctx: InferContext<T>) => CurrentAdmin,
   ) =>
   async (ctx: InferContext<T>) => {
-    let { params, query, request, set, body } = ctx;
+    const { params, query, request, set, body } = ctx;
     const currentAdmin = adminGetter?.(ctx);
 
     const controller = new (route.Controller as AdminJSController)(
       { admin },
-      currentAdmin
+      currentAdmin,
     );
 
     let payload = {};
@@ -60,7 +59,9 @@ const routeHandler =
     const actionRequest: ActionRequest = {
       ...request,
       payload,
+      // biome-ignore lint/suspicious/noExplicitAny: AdminJS ActionRequest.params expects specific shape that differs from Elysia's dynamic params
       params: params as any,
+      // biome-ignore lint/suspicious/noExplicitAny: AdminJS ActionRequest.query expects specific shape that differs from Elysia's query
       query: query as any,
       method: request.method.toLowerCase() as "get" | "post",
     };
@@ -68,7 +69,7 @@ const routeHandler =
     const response = createResponse();
     const html = await controller[route.action as keyof typeof controller](
       actionRequest,
-      response
+      response,
     );
 
     if (html) {
@@ -85,7 +86,7 @@ export const buildRoute = <T extends Elysia>(
   route: (typeof AdminJSRouter)["routes"][number],
   router: Elysia,
   admin: AdminJS,
-  adminGetter?: (ctx: InferContext<T>) => CurrentAdmin
+  adminGetter?: (ctx: InferContext<T>) => CurrentAdmin,
 ) => {
   const elysiaPath = route.path.replace(/{/g, ":").replace(/}/g, ""); //change routes from {recordId} to :recordId
   const handler = routeHandler(admin, route, adminGetter);
@@ -95,7 +96,7 @@ export const buildRoute = <T extends Elysia>(
 export const buildRoutes = <T extends AnyElysia>(
   admin: AdminJS,
   routes: (typeof AdminJSRouter)["routes"],
-  adminGetter?: (ctx: InferContext<T>) => CurrentAdmin
+  adminGetter?: (ctx: InferContext<T>) => CurrentAdmin,
 ) => {
   return routes.reduce((router, route) => {
     buildRoute<T>(route, router, admin, adminGetter);

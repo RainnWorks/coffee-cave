@@ -1,14 +1,7 @@
 import { useQuery } from "@rocicorp/zero/react";
-import { useTypedZero } from "./zero";
-import type {
-  RestaurantTable,
-  Schema,
-  Tab,
-  TabItem,
-} from "../../../generated/schema";
 import type { IconName } from "lucide-react/dynamic";
-import type { Zero } from "@rocicorp/zero";
 import { useMemo } from "react";
+import { queries } from "@/queries";
 
 const capitalize = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -28,31 +21,10 @@ export const generateTabName = (categories: string[]): string => {
   return categoriesSet.join(", ") + " and " + lastElement;
 };
 
-const tableQuery = (z: Zero<Schema>) => {
-  return z.query.restaurant_table
-    .related("tabs", (q) =>
-      q.related("items", (q) =>
-        q
-          .related("menuItem", (q) =>
-            q.related("categories", (q) => q.related("category"))
-          )
-          .related("allergyRestrictions", (q) => q.related("allergen"))
-      )
-    )
-    .related("payments", (q) => q.related("tabItems"));
-};
-
-type TableQuery = ReturnType<typeof tableQuery>;
-
-const singleTableQuery = (z: Zero<Schema>) => {
-  return tableQuery(z).one();
-};
-type SingleTableQuery = ReturnType<typeof singleTableQuery>;
-
+// Type helper - extract table type from query result
 const _OnlyUsedForTypes = () => {
-  const z = useTypedZero();
-  const [x] = useQuery(tableQuery(z).one());
-  return x;
+  const [x] = useQuery(queries.tables.allWithDetails());
+  return x?.[0];
 };
 
 type Table = Exclude<ReturnType<typeof _OnlyUsedForTypes>, undefined>;
@@ -68,7 +40,7 @@ const reconcileTable = (table: Table) => {
     const tabTotal = tab.items.reduce(
       (balance, tabItem) =>
         balance + (tabItem.priceOverride || tabItem.menuItem?.price || 0),
-      0
+      0,
     );
     tabBalances[tab.id] = tabTotal;
     tableBalance += tabTotal;
@@ -118,7 +90,7 @@ const reconcileTable = (table: Table) => {
       });
 
       const categories = tab.items?.flatMap(
-        (item) => item.menuItem?.categories?.[0]?.category
+        (item) => item.menuItem?.categories?.[0]?.category,
       );
 
       // Create a reconciled tab
@@ -126,7 +98,7 @@ const reconcileTable = (table: Table) => {
         ...tab,
         icon: (categories?.[0]?.icon as IconName) ?? undefined,
         name: generateTabName(
-          categories.map((cat) => cat?.name).filter((x): x is string => !!x)
+          categories.map((cat) => cat?.name).filter((x): x is string => !!x),
         ),
         tabItems: reconciledTabItems || [],
         remainingBalance: tabBalances[tab.id] ?? 0,
@@ -147,31 +119,29 @@ export type ReconciledTable = ReturnType<typeof reconcileTable>;
 export type ReconciledTabItem =
   ReconciledTable["tabs"][number]["tabItems"][number];
 
-export const useReconciledTableQuery = (
-  id: string,
-  q?: (query: SingleTableQuery) => SingleTableQuery
-) => {
-  const z = useTypedZero();
-  const query = useMemo(() => singleTableQuery(z).where("id", "=", id), [id]);
-  const memoizedQuery = useMemo(() => (q ? q(query) : query), [q, query]);
-  const [table, { type }] = useQuery(memoizedQuery);
+/**
+ * Hook to get a single reconciled table by ID
+ * Uses query registry with permission checks
+ */
+export const useReconciledTableQuery = (id: string) => {
+  const [table, { type }] = useQuery(queries.tables.byId({ id }));
 
   return useMemo(
-    () => [table ? reconcileTable(table) : undefined, { type }] as const,
-    [table, type]
+    () =>
+      [table ? reconcileTable(table as Table) : undefined, { type }] as const,
+    [table, type],
   );
 };
 
-export const useReconciledTablesQuery = (
-  q?: (query: TableQuery) => TableQuery
-) => {
-  const z = useTypedZero();
-  const query = useMemo(() => tableQuery(z), []);
-  const memoizedQuery = useMemo(() => (q ? q(query) : query), [q, query]);
-  const [tables, { type }] = useQuery(memoizedQuery);
+/**
+ * Hook to get all reconciled tables
+ * Uses query registry with permission checks
+ */
+export const useReconciledTablesQuery = () => {
+  const [tables, { type }] = useQuery(queries.tables.allWithDetails());
 
   return useMemo(
-    () => [tables.map(reconcileTable), { type }] as const,
-    [tables, type]
+    () => [(tables as Table[]).map(reconcileTable), { type }] as const,
+    [tables, type],
   );
 };

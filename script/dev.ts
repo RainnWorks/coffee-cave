@@ -1,4 +1,5 @@
 import concurrently from "concurrently";
+
 // Parallel services using concurrently API
 console.log("🎯 Starting development services...");
 
@@ -24,7 +25,7 @@ const { result } = concurrently(
     prefix: "name",
     restartTries: 3,
     killOthersOn: "failure",
-  }
+  },
 );
 
 result.then(
@@ -33,5 +34,5 @@ result.then(
   },
   () => {
     process.exit(1);
-  }
+  },
 );

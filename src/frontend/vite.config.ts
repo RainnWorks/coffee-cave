@@ -10,7 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../"),
-      "@frontend": path.resolve(__dirname, "./app"),
+      "@ui": path.resolve(__dirname, "./app/ui"),
     },
   },
   publicDir: "./frontend", // Static assets directory

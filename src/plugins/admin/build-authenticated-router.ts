@@ -1,28 +1,29 @@
-import { AdminJS, Router as AdminJSRouter, type CurrentAdmin } from "adminjs";
+import {
+  type AdminJS,
+  Router as AdminJSRouter,
+  type CurrentAdmin,
+} from "adminjs";
 import { Elysia } from "elysia";
+import { type AuthPayload, authedPlugin } from "../auth";
 import { buildAssets, buildRoutes } from "./build-router";
-import { authedPlugin, type AuthPayload } from "../auth";
-
 
 /**
  * Convert AuthPayload to AdminJS CurrentAdmin format
  */
 const authPayloadToCurrentAdmin = (
-  authPayload?: AuthPayload | null
+  authPayload?: AuthPayload | null,
 ): CurrentAdmin => {
   if (!authPayload) throw new Error("No auth payload");
   if (authPayload.role !== "admin") throw new Error("Not an admin");
 
   return {
     id: authPayload.sub,
-    email: `${authPayload.adminId}@coffeecave.admin`,
+    email: authPayload.email ?? `${authPayload.sub}@coffeecave.admin`,
     role: authPayload.role,
   };
 };
 
-export const buildAuthenticatedRouter = async (
-  admin: AdminJS,
-) => {
+export const buildAuthenticatedRouter = async (admin: AdminJS) => {
   // initialize bundler
   await admin.initialize();
   await admin.watch();
@@ -41,7 +42,7 @@ export const buildAuthenticatedRouter = async (
       return { currentAdmin };
     })
     .onBeforeHandle(async ({ redirect, authPayload, path }) => {
-      console.log('ofnoisdfnisoadnf')
+      console.log("ofnoisdfnisoadnf");
 
       // Skip auth for static assets
       if (path.includes("/frontend/assets/")) {
@@ -58,6 +59,6 @@ export const buildAuthenticatedRouter = async (
   return elysia.use(
     buildRoutes<typeof elysia>(admin, routes, (ctx) => {
       return authPayloadToCurrentAdmin(ctx.authPayload);
-    })
+    }),
   );
 };

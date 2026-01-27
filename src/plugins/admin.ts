@@ -1,7 +1,13 @@
 import AdminJS from "adminjs";
-import { buildAuthenticatedRouter } from "./admin/build-authenticated-router";
 import { Sequelize } from "sequelize";
-import { allergenTableRelationships, categoryTableRelationships, menuItemTableRelationships, schema } from "../schema";
+import { schema } from "../schema";
+import { buildAuthenticatedRouter } from "./admin/build-authenticated-router";
+
+// Access relationships from the schema object
+const allergenRelationships = schema.relationships.allergen;
+const categoryRelationships = schema.relationships.category;
+const menuItemRelationships = schema.relationships.menuItem;
+
 import { Database, Resource } from "@adminjs/sequelize";
 
 AdminJS.registerAdapter({ Database, Resource });
@@ -13,48 +19,42 @@ export async function adminPlugin() {
   });
 
   const RestaurantSettings = sequelize.define(
-    schema.tables.restaurant_settings.name,
+    schema.tables.restaurantSettings.name,
     {},
-    { tableName: schema.tables.restaurant_settings.name, timestamps: false }
+    { tableName: schema.tables.restaurantSettings.name, timestamps: false },
   );
   const MenuItem = sequelize.define(
-    schema.tables.menu_item.name,
+    schema.tables.menuItem.name,
     {},
-    { tableName: schema.tables.menu_item.name, timestamps: false }
+    { tableName: schema.tables.menuItem.name, timestamps: false },
   );
   const Category = sequelize.define(
     schema.tables.category.name,
     {},
-    { tableName: schema.tables.category.name, timestamps: false }
+    { tableName: schema.tables.category.name, timestamps: false },
   );
   const Allergen = sequelize.define(
     schema.tables.allergen.name,
     {},
-    { tableName: schema.tables.allergen.name, timestamps: false }
+    { tableName: schema.tables.allergen.name, timestamps: false },
   );
 
   Category.belongsToMany(MenuItem, {
-    through: schema.tables.menu_item_category.name,
-    foreignKey:
-      categoryTableRelationships.relationships.menuItems[0].destField[0],
-    otherKey:
-      menuItemTableRelationships.relationships.categories[0].sourceField[0],
+    through: schema.tables.menuItemCategory.name,
+    foreignKey: categoryRelationships.menuItems[0].destField[0],
+    otherKey: menuItemRelationships.categories[0].sourceField[0],
   });
 
   MenuItem.belongsToMany(Category, {
-    through: schema.tables.menu_item_category.name,
-    foreignKey:
-      menuItemTableRelationships.relationships.categories[0].destField[0],
-    otherKey:
-      categoryTableRelationships.relationships.menuItems[0].sourceField[0],
+    through: schema.tables.menuItemCategory.name,
+    foreignKey: menuItemRelationships.categories[0].destField[0],
+    otherKey: categoryRelationships.menuItems[0].sourceField[0],
   });
 
   Allergen.belongsToMany(MenuItem, {
-    through: schema.tables.menu_item_allergen.name,
-    foreignKey:
-      menuItemTableRelationships.relationships.allergens[0].destField[0],
-    otherKey:
-      allergenTableRelationships.relationships.menuItems[0].sourceField[0],
+    through: schema.tables.menuItemAllergen.name,
+    foreignKey: menuItemRelationships.allergens[0].destField[0],
+    otherKey: allergenRelationships.menuItems[0].sourceField[0],
   });
 
   // Create AdminJS instance

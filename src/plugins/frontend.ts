@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { staticPlugin } from "@elysiajs/static";
 
 export async function frontendPlugin() {

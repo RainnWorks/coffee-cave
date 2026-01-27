@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function notEmpty<TValue>(
-  value: TValue | null | undefined
+  value: TValue | null | undefined,
 ): value is TValue {
   return value !== null && value !== undefined;
 }
@@ -33,7 +33,7 @@ export function notEmpty<TValue>(
  */
 export function partition<T>(
   predicate: (val: T) => boolean,
-  arr: Array<T>
+  arr: Array<T>,
 ): [Array<T>, Array<T>] {
   const partitioned: [Array<T>, Array<T>] = [[], []];
   arr.forEach((val: T) => {
