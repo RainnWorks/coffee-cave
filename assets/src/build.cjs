@@ -26,12 +26,15 @@ const arrow=(x1,x2,y,sw=6)=>line(`M${x1} ${y}H${x2} M${x2-14} ${y-14}L${x2} ${y}
 function svg(w,h,label,body,bg=C.bg){return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title>${rect(0,0,w,h,0,bg)}${body}</svg>\n`;}
 function icon(){return svg(1024,1024,'Coffee Cave: a cup under a cave arch',
   line('M192 820V432C192 236 324 136 512 136S832 236 832 432V820',C.copper,80)+
+  // Cup and handle scaled as one group and centred on the arch, with equal clearance each side.
+  `<g transform="translate(3.5 59.5) scale(0.9)">`+
   line('M628 456H682C782 456 782 610 682 610H628',C.cream,56)+
-  `<path d="M320 420H656V626C656 724 594 770 488 770S320 724 320 626Z" fill="${C.cream}"/>`);}
+  `<path d="M320 420H656V626C656 724 594 770 488 770S320 724 320 626Z" fill="${C.cream}"/></g>`);}
 function favicon(){return svg(16,16,'Coffee Cave',
   line('M2.5 13V6.8C2.5 3.6 4.6 2 8 2S13.5 3.6 13.5 6.8V13',C.copper,1.5)+
+  `<g transform="translate(0.4 1.425) scale(0.85)">`+
   line('M10 7.4H10.7C12.4 7.4 12.4 10 10.7 10H10',C.cream,1)+
-  `<path d="M5 6.7H10.4V10C10.4 11.6 9.4 12.3 7.7 12.3S5 11.6 5 10Z" fill="${C.cream}"/>`);}
+  `<path d="M5 6.7H10.4V10C10.4 11.6 9.4 12.3 7.7 12.3S5 11.6 5 10Z" fill="${C.cream}"/></g>`);}
 function hero(){let b='';
   // Silhouettes: a counter tablet and a kitchen display on a short stand.
   b+=rect(72,92,710,664,36,C.ink,C.copper,3);
