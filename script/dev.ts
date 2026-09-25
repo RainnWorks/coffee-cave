@@ -11,7 +11,7 @@ const { result } = concurrently(
       prefixColor: "cyan",
     },
     {
-      command: "bun run dev:server",
+      command: "bun run dev:backend",
       name: "server",
       prefixColor: "magenta",
     },
